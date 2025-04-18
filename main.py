@@ -26,7 +26,11 @@ def send_welcome(message):
     item5 = types.KeyboardButton("کۆرسی مایکرۆسۆفت وۆرد ئاستی سەرەتا (بێ کۆین)")
 
     markup.add(item1, item2, item3, item4, item5)
-    bot.send_message(message.chat.id, "سڵاو! بەخێربێیت بۆ بۆت! پەنجە بە دوگمەی کۆرسەکان بۆ دیاری کردنی کۆرسەکان.", reply_markup=markup)
+    bot.send_message(message.chat.id, 
+                     "سڵاو! بەخێربێیت بۆ بۆت! پەنجە بە دوگمەی کۆرسەکان بۆ دیاری کردنی کۆرسەکان.\n\n"
+                     "کۆرسی مایکرۆسۆفت وۆرد ئاستی سەرەتا (بێ کۆین): کۆرسەی تایبەتیە، پەیوەندە بە "
+                     "یەکەمی مایکرۆسۆفت وۆرد وە بێ کۆینە.", 
+                     reply_markup=markup)
 
 # تایبەتمەندی کۆرسەکان
 @bot.message_handler(func=lambda message: True)
@@ -34,8 +38,16 @@ def send_course_link(message):
     course_name = message.text
     if course_name == "کۆرسی مایکرۆسۆفت وۆرد ئاستی سەرەتا (بێ کۆین)":
         # ئەم کۆرسە بێ کۆینە
-        bot.send_message(message.chat.id, "پیرۆزە ئەمە کۆرسەکەتە: https://www.youtube.com/watch?v=JZ88S75tqmk&t=1s")
-    else:
+        bot.send_message(message.chat.id, 
+                         "پیرۆزە ئەمە کۆرسەکەتە: https://www.youtube.com/watch?v=JZ88S75tqmk&t=1s")
+    elif course_name == "کۆرسی مایکرۆسۆفت ئێکسڵ" or course_name == "کۆرسی زمانی پایسۆن" or course_name == "کۆرسی مایکرۆسۆفت ئەکسس" or course_name == "کۆرسی مایکرۆسۆفت وۆرد ئاستی سەرەتا":
         bot.send_message(message.chat.id, "کۆرسەکە پێویست بە کۆین.")
-  
+    else:
+        bot.send_message(message.chat.id, "کۆرسەکانت نەدۆزرا.")
+
+# گەڕاندنەوەی بەرزەوە کاتێک کلیکی لە دوگمەیەکی گەڕانەوە دەکەیت
+@bot.message_handler(func=lambda message: message.text == "گەراندنەوە")
+def go_back(message):
+    send_welcome(message)
+
 bot.polling(none_stop=True)
