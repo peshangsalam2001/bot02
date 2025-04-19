@@ -11,9 +11,9 @@ invited_users = set()
 
 # نرخەکانی کۆرسەکان
 courses_data = {
-    "Microsoft Excel": 20,
-    "Python": 15,
-    "Microsoft Access": 10
+    "کۆرسی مایکرۆسۆفت ئێکسڵ": 20 کۆین,
+    "کۆرسی زمانی پایسۆن": 15 کۆین,
+    "کۆرسی مایکرۆسۆفت ئەکسس": 10 کۆین
 }
 
 @bot.message_handler(commands=['start'])
