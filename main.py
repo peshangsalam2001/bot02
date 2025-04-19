@@ -1,132 +1,113 @@
 import telebot
 from telebot import types
+import json
+import os
 
 TOKEN = "7438009531:AAGgank9ch5ZjphQk20735a3nGwpVQdGF70"
 bot = telebot.TeleBot(TOKEN)
 
-# database
-user_data = {}  # Stores coin count
-referrals = {}  # Tracks who referred whom
+user_data_file = 'user_data.json'
 
-welcome_image = 'https://telegra.ph/file/ae508eaaf738ddc6206b7.jpg'  # Change to your own
+def load_user_data():
+    if os.path.exists(user_data_file):
+        with open(user_data_file, 'r') as file:
+            return json.load(file)
+    return {}
 
-courses = {
-    "کۆرسی مایکرۆسۆفت ئێکسڵ": {"coins": 30, "link": "https://t.me/AboutMasterLord"},
-    "کۆرسی زمانی پایسۆن": {"coins": 20, "link": "https://t.me/AboutMasterLord"},
-    "کۆرسی مایکرۆسۆفت ئەکسس": {"coins": 10, "link": "https://t.me/AboutMasterLord"},
+def save_user_data(data):
+    with open(user_data_file, 'w') as file:
+        json.dump(data, file)
+
+user_data = load_user_data()
+
+course_prices = {
+    "کۆرسی مایکرۆسۆفت ئێکسڵ": 30,
+    "کۆرسی زمانی پایسۆن": 20,
+    "کۆرسی مایکرۆسۆفت ئەکسس": 10
+}
+
+course_links = {
+    "کۆرسی مایکرۆسۆفت ئێکسڵ": "https://t.me/AboutMasterLord",
+    "کۆرسی زمانی پایسۆن": "https://t.me/AboutMasterLord",
+    "کۆرسی مایکرۆسۆفت ئەکسس": "https://t.me/AboutMasterLord"
 }
 
 def get_main_keyboard():
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(
+    keyboard.row(
         types.InlineKeyboardButton("کۆرسەکان", callback_data="courses"),
-        types.InlineKeyboardButton("کۆینەکانم", callback_data="mycoins"),
+        types.InlineKeyboardButton("کۆینەکانم", callback_data="coins")
     )
-    keyboard.add(
-        types.InlineKeyboardButton("لینکی بانگهێشتنامە", callback_data="referral"),
-        types.InlineKeyboardButton("هەموو بۆتەکانم", callback_data="bots"),
+    keyboard.row(
+        types.InlineKeyboardButton("لینکی بانگهێشتنامە", callback_data="invite"),
+        types.InlineKeyboardButton("هەموو بۆتەکانم", callback_data="all_bots")
     )
     return keyboard
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    user_id = message.from_user.id
-    ref_id = None
+    user_id = str(message.from_user.id)
+    if user_id not in user_data:
+        user_data[user_id] = {"coins": 0, "invited": []}
+        save_user_data(user_data)
 
-    # Detect referral
-    if len(message.text.split()) > 1:
-        ref_id = int(message.text.split()[1])
-        if ref_id != user_id and user_id not in user_data:
-            user_data[ref_id] = user_data.get(ref_id, 0) + 1
-            bot.send_message(ref_id, f"🏅 کەسێک بە بەکارهێنانی لینکی بانگهێشتت بۆتەکەی بەکارھێنا، کۆینێک بۆ زیادکرایەوە!\nکۆینەکانی تۆ: {user_data[ref_id]}")
+    if message.text and message.text.startswith("/start "):
+        ref_id = message.text.split()[1]
+        if ref_id != user_id and ref_id in user_data:
+            if user_id not in user_data[ref_id]["invited"]:
+                user_data[ref_id]["coins"] += 1
+                user_data[ref_id]["invited"].append(user_id)
+                save_user_data(user_data)
+                bot.send_message(ref_id, f"👤 کەسێک بە لینکە بانگهێشتنامەکەتەوە هاتە ناو بۆتەکە، 1 کۆینت زیادبوو 🪙\n\n👛 ژمارەی کۆینەکانت: {user_data[ref_id]['coins']}")
 
-    user_data[user_id] = user_data.get(user_id, 0)
-
-    bot.send_photo(
-        user_id,
-        welcome_image,
-        caption="بەخێربێیت بۆ بۆتی کۆرسەکان! 👋\nتکایە یەکێک لە دوگمەکان هەلبژێرە:",
-        reply_markup=get_main_keyboard()
-    )
+    photo_url = 'https://i.ibb.co/dJtHr9p/welcome.jpg'  # Replace with your actual image URL or local file
+    caption = "بەخێربێیت بۆ بۆتی فێرکاری 📚\n\nتکایە یەکێک لە دوگمەکان هەلبژێرە"
+    bot.send_photo(message.chat.id, photo=photo_url, caption=caption, reply_markup=get_main_keyboard())
 
 @bot.callback_query_handler(func=lambda call: True)
-def callback(call):
-    user_id = call.from_user.id
+def callback_query(call):
+    user_id = str(call.from_user.id)
 
-    if call.data == "back":
-        bot.edit_message_caption(
-            call.message.chat.id,
-            call.message.message_id,
-            caption="بەخێربێیت بۆ بۆتی کۆرسەکان! 👋\nتکایە یەکێک لە دوگمەکان هەلبژێرە:",
+    if call.data == "courses":
+        markup = types.InlineKeyboardMarkup()
+        for name, price in course_prices.items():
+            markup.add(types.InlineKeyboardButton(f"{name} - {price} کۆین", callback_data=f"buy_{name}"))
+        markup.add(types.InlineKeyboardButton("🔙 گەڕانەوە", callback_data="back"))
+        bot.edit_message_text("📚 ئەمە لیستی کۆرسەکانە:", call.message.chat.id, call.message.message_id, reply_markup=markup)
+
+    elif call.data == "coins":
+        coins = user_data.get(user_id, {}).get("coins", 0)
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("🔙 گەڕانەوە", callback_data="back"))
+        bot.edit_message_text(f"👛 ژمارەی کۆینەکانت: {coins}", call.message.chat.id, call.message.message_id, reply_markup=markup)
+
+    elif call.data == "invite":
+        invite_link = f"https://t.me/Bot02PA_Bot?start={user_id}"
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("🔙 گەڕانەوە", callback_data="back"))
+        bot.edit_message_text(f"🔗 ئەمە لینکە بانگهێشتنامەکەتە:\n{invite_link}", call.message.chat.id, call.message.message_id, reply_markup=markup)
+
+    elif call.data == "all_bots":
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("🔙 گەڕانەوە", callback_data="back"))
+        bot.edit_message_text("🤖 لیستی بۆتەکان بەزودی زیاد دەکرێت...", call.message.chat.id, call.message.message_id, reply_markup=markup)
+
+    elif call.data == "back":
+        photo_url = 'https://i.ibb.co/dJtHr9p/welcome.jpg'  # Replace if needed
+        caption = "بەخێربێیت بۆ بۆتی فێرکاری 📚\n\nتکایە یەکێک لە دوگمەکان هەلبژێرە"
+        bot.edit_message_media(
+            media=types.InputMediaPhoto(photo_url, caption=caption),
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
             reply_markup=get_main_keyboard()
         )
 
-    elif call.data == "courses":
-        keyboard = types.InlineKeyboardMarkup()
-        for name in courses:
-            keyboard.add(types.InlineKeyboardButton(f"{name} - {courses[name]['coins']} کۆین", callback_data=f"course_{name}"))
-        keyboard.add(types.InlineKeyboardButton("🔙 گەڕانەوە", callback_data="back"))
-        bot.edit_message_caption(
-            call.message.chat.id,
-            call.message.message_id,
-            caption="📚 ئەم کۆرسانە بەردەستە:",
-            reply_markup=keyboard
-        )
-
-    elif call.data == "mycoins":
-        coins = user_data.get(user_id, 0)
-        bot.edit_message_caption(
-            call.message.chat.id,
-            call.message.message_id,
-            caption=f"💰 ژمارەی کۆینەکانت: {coins}\n🔙 گەڕانەوە:",
-            reply_markup=types.InlineKeyboardMarkup().add(
-                types.InlineKeyboardButton("🔙 گەڕانەوە", callback_data="back")
-            )
-        )
-
-    elif call.data == "referral":
-        link = f"https://t.me/Bot02PA_Bot?start={user_id}"
-        bot.edit_message_caption(
-            call.message.chat.id,
-            call.message.message_id,
-            caption=f"🔗 ئەمە لینکەکەتە:\n{link}",
-            reply_markup=types.InlineKeyboardMarkup().add(
-                types.InlineKeyboardButton("🔙 گەڕانەوە", callback_data="back")
-            )
-        )
-
-    elif call.data == "bots":
-        bot.edit_message_caption(
-            call.message.chat.id,
-            call.message.message_id,
-            caption="🤖 بۆتەکانت بزانی... (ئەم بەشە دەستکاری بکە بۆ زیادکردنی بۆت)\n🔙 گەڕانەوە:",
-            reply_markup=types.InlineKeyboardMarkup().add(
-                types.InlineKeyboardButton("🔙 گەڕانەوە", callback_data="back")
-            )
-        )
-
-    elif call.data.startswith("course_"):
-        course_name = call.data.split("course_")[1]
-        course_info = courses[course_name]
-        coins_required = course_info['coins']
-
-        if user_data[user_id] >= coins_required:
-            bot.edit_message_caption(
-                call.message.chat.id,
-                call.message.message_id,
-                caption=f"🎉 پیرۆزە بەڕێز، ئەمە کۆرسەکەتە: {course_info['link']}",
-                reply_markup=types.InlineKeyboardMarkup().add(
-                    types.InlineKeyboardButton("🔙 گەڕانەوە", callback_data="back")
-                )
-            )
+    elif call.data.startswith("buy_"):
+        course_name = call.data[4:]
+        price = course_prices[course_name]
+        if user_data[user_id]["coins"] >= price:
+            bot.edit_message_text(f"🎉 پیرۆزە بەڕێز، ئەمە کۆرسەکەیە:\n{course_links[course_name]}", call.message.chat.id, call.message.message_id)
         else:
-            bot.edit_message_caption(
-                call.message.chat.id,
-                call.message.message_id,
-                caption="❌ ببورە بڕی پێویست لە کۆینت نیە بۆ کڕینی ئەم کۆرسە، تکایە کۆینەکانت زیادبکە لەڕێگەی لینکی بانگهێشتنامە یاخود کڕینی کۆین",
-                reply_markup=types.InlineKeyboardMarkup().add(
-                    types.InlineKeyboardButton("🔙 گەڕانەوە", callback_data="back")
-                )
-            )
+            bot.edit_message_text("❗️ ببورە بڕی پێویست لە کۆینت نیە بۆ کڕینی ئەم کۆرسە، تکایە کۆینەکانت زیادبکە لەڕێگەی لینکی بانگهێشتنامە یاخود کڕینی کۆین.", call.message.chat.id, call.message.message_id)
 
 bot.infinity_polling()
