@@ -18,7 +18,7 @@ courses_data = {
 
 # فۆنکشنی نامەی پێشواز
 def send_welcome_message(chat_id, user_id, first_name):
-    photo_url = 'https://i.imgur.com/CwdrpWr.jpeg'
+    photo_url = 'https://imgur.com/a/2EDWQ0H'
     caption = f"""سڵاو بەڕێز {first_name}، بەخێربێیت بۆ بۆتی ئەکادیمیای پێشەنگ.
 ئەم بۆتە تایبەتە بە کۆمەڵێک خزمەتگوزاری و زانیاری، هەر یەکە لە کڕینی کۆرس، زانینی کۆینەکانت، زانیاری تەکنەلۆجی و زۆر شتی تر.
 
