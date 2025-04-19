@@ -16,28 +16,9 @@ courses_data = {
     "کۆرسی مایکرۆسۆفت ئەکسس": 10
 }
 
-@bot.message_handler(commands=['start'])
-def start(message):
-    user_id = message.from_user.id
-    first_name = message.from_user.first_name
-    args = message.text.split()
-
-    # دابینکردنی هەژماری نوێ
-    if user_id not in user_coins:
-        user_coins[user_id] = 0
-
-    # بەکارهێنەری نوێ لە ڕێگەی بانگەوازەوە
-    if len(args) > 1:
-        inviter_id = args[1]
-        if inviter_id != str(user_id):
-            key = f"{inviter_id}_{user_id}"
-            if key not in invited_users:
-                invited_users.add(key)
-                user_coins[int(inviter_id)] = user_coins.get(int(inviter_id), 0) + 1
-                bot.send_message(int(inviter_id), f"کەسێک بە بانگەوازت هاتە ناو بۆتەکە. 1 کۆینت زیاد کرا.")
-
-    # وێنە + نامەی سەرەتا
-    photo_url = 'https://i.imgur.com/CwdrpWr.jpeg'  # وێنەی PeshangAcademy
+# فۆنکشنی نامەی پێشواز
+def send_welcome_message(chat_id, user_id, first_name):
+    photo_url = 'https://i.imgur.com/CwdrpWr.jpeg'
     caption = f"""سڵاو بەڕێز {first_name}، بەخێربێیت بۆ بۆتی ئەکادیمیای پێشەنگ.
 ئەم بۆتە تایبەتە بە کۆمەڵێک خزمەتگوزاری و زانیاری، هەر یەکە لە کڕینی کۆرس، زانینی کۆینەکانت، زانیاری تەکنەلۆجی و زۆر شتی تر.
 
@@ -52,8 +33,30 @@ def start(message):
         types.InlineKeyboardButton("هەموو بۆتەکانم", callback_data='all_bots')
     )
 
-    bot.send_photo(message.chat.id, photo_url, caption=caption, reply_markup=markup)
+    bot.send_photo(chat_id, photo_url, caption=caption, reply_markup=markup)
 
+# فرمانی /start
+@bot.message_handler(commands=['start'])
+def start(message):
+    user_id = message.from_user.id
+    first_name = message.from_user.first_name
+    args = message.text.split()
+
+    if user_id not in user_coins:
+        user_coins[user_id] = 0
+
+    if len(args) > 1:
+        inviter_id = args[1]
+        if inviter_id != str(user_id):
+            key = f"{inviter_id}_{user_id}"
+            if key not in invited_users:
+                invited_users.add(key)
+                user_coins[int(inviter_id)] = user_coins.get(int(inviter_id), 0) + 1
+                bot.send_message(int(inviter_id), f"کەسێک بە بانگەوازت هاتە ناو بۆتەکە. 1 کۆینت زیاد کرا.")
+
+    send_welcome_message(message.chat.id, user_id, first_name)
+
+# هەڵگرتنی دوگمەکان
 @bot.callback_query_handler(func=lambda call: True)
 def handle_buttons(call):
     user_id = call.from_user.id
@@ -99,6 +102,6 @@ def handle_buttons(call):
         bot.send_message(call.message.chat.id, "ئەمە بۆتە تایبەتی ئەکادیمیای پێشەنگە:\n@PeshangTestBot", reply_markup=add_back_button())
 
     elif call.data == 'back':
-    send_welcome_message(call.message.chat.id, user_id, first_name)
+        send_welcome_message(call.message.chat.id, user_id, first_name)
 
 bot.polling()
