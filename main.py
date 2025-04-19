@@ -99,6 +99,6 @@ def handle_buttons(call):
         bot.send_message(call.message.chat.id, "ئەمە بۆتە تایبەتی ئەکادیمیای پێشەنگە:\n@PeshangTestBot", reply_markup=add_back_button())
 
     elif call.data == 'back':
-        start(call.message)
+    send_welcome_message(call.message.chat.id, user_id, first_name)
 
 bot.polling()
