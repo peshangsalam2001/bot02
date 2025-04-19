@@ -23,15 +23,26 @@ invite_link = 'https://t.me/Bot02PA_Bot?start=ref'
 def start(message):
     user_id = message.from_user.id
     first_name = message.from_user.first_name
-    user_coins.setdefault(user_id, 0)
+    text = message.text
 
-    photo_url = 'https://i.imgur.com/CwdrpWr.jpeg'
-    caption = f"""سڵاو بەڕێز {first_name}، بەخێربێیت بۆ بۆتی ئەکادیمیای پێشەنگ.
-ئەم بۆتە تایبەتە بە کۆمەڵێک خزمەتگوزاری و زانیاری، هەر یەکە لە کڕینی کۆرس، زانینی کۆینەکانت، زانیاری تەکنەلۆجی و زۆر شتی تر.
+    if user_id not in users_data:
+        users_data[user_id] = {"coins": 0}
+    
+        if len(text.split()) > 1:
+            referrer_id = int(text.split()[1])
+            if referrer_id != user_id and referrer_id in users_data:
+                users_data[referrer_id]["coins"] += 1
+                bot.send_message(referrer_id, f"پیرۆزە! 1 کۆینت زیاد بوو چونکە {first_name} لە ڕێگەی بانگهێشتەکەتەوە بێت ناو بۆتەکە.")
 
-بۆ هەر یەکێک لەو تایبەتمەندیانە پەنجە بە دوگمەی مەبەست بنێ:
-"""
+    # Welcome message
+    welcome_text = f"""سڵاو بەڕێز {first_name}، بەخێربێیت بۆ بۆتی ئەکادیمیای پێشەنگ!
+ئەم بۆتە تایبەتە بە کۆمەڵێک خزمەتگوزاری و زانیاری:
+- کڕینی کۆرس
+- زانینی کۆینەکانت
+- زانیاری تەکنەلۆجی و زۆر شتی تر
 
+بۆ هەر یەکێک لەو تایبەتمەندیانە، پەنجە بە دوگمەی مەبەست بنێ."""
+    bot.send_message(user_id, welcome_text, reply_markup=main_menu())
     markup = types.InlineKeyboardMarkup(row_width=2)
     markup.add(
         types.InlineKeyboardButton("کۆینەکانم", callback_data='my_coins'),
