@@ -3,7 +3,7 @@ from telebot import types
 import json
 import os
 
-TOKEN = "7438009531:AAGgank9ch5ZjphQk20735a3nGwpVQdGF70"
+TOKEN = '7007340673:AAEhp1W1PhoUq_rOcssQVDIvq0OZVEXHARM'
 bot = telebot.TeleBot(TOKEN)
 
 user_data_file = 'user_data.json'
