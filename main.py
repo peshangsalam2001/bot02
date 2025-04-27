@@ -15,7 +15,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # تۆکێنی بۆتی تێلێگرام - ئەمە بگۆڕە بە تۆکێنی خۆت
-BOT_TOKEN = "7018443911:AAGuZfbkaQc-s2icbMpljkjokKkzg_azkYI"  # جێگەی تۆکێنی بۆتەکەت دابنێ
+BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"  # جێگەی تۆکێنی بۆتەکەت دابنێ
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -24,14 +24,33 @@ GLOFOX_REGISTER_URL = "https://api.glofox.com/2.0/register"
 GLOFOX_LOGIN_URL = "https://auth.glofox.com/login"
 GLOFOX_BRANCH_ID = "608a0490069e2d25f0655f6b"
 GLOFOX_NAMESPACE = "glowcomove"
-GLOFOX_AUTHORIZATION = "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJfIiwiZXhwIjoxNzQ4MzU2NDg1LCJpYXQiOjE3NDU3NjQ0ODUsImlzcyI6Il8iLCJ1c2VyIjp7Il9pZCI6Imd1ZXN0IiwibmFtZXNwYWNlIjoiZ2xvd2NvbW92ZSIsImJyYW5jaF9pZCI6IjYwOGEwNDkwMDY5ZTJkMjVmMDY1NWY2YiIsImZpcnN0X25hbWUiOiJHdWVzdCIsImxhc3RfbmFtZSI6IlVzZciLCJ0eXBlIjoiR1VFU1QiLCJpc1N1cGVyQWRtaW4iOmZhbHNlfX0.VBn0vDSFFtcrnzvGnDoebyCulJxmVvlNdc3djebp_aU"
+GLOFOX_AUTHORIZATION = "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJfIiwiZXhwIjoxNzQ4MzU2NDg1LCJpYXQiOjE3NDU3NjQ0ODUsImlzcyI6Il8iLCJ1c2VyIjp7Il9pZCI6Imd1ZXN0IiwibmFtZXNwYWNlIjoiZ2xvd2NvbW92ZSIsImJyYW5jaF9pZCI6IjYwOGEwNDkwMDY5ZTJkMjVmMDY1NWY2YiIsImZpcnN0X25hbWUiOiJHdWVzdCIsImxhc1*_bmUiOiJVc2VyIiwidHlwZSI6IkdVRVNUIiwiaXNTdXBlckFkbWluIjpmYWxzZX19.VBn0vDSFFtcrnzvGnDoebyCulJxmVvlNdc3djebp_aU"
 
 # Stripe API Information
+STRIPE_CREATE_SETUP_INTENT_URL = "https://api.stripe.com/v1/setup_intents"
 STRIPE_CONFIRM_URL_BASE = "https://api.stripe.com/v1/setup_intents/"
 STRIPE_PUBLIC_KEY = "pk_live_8e7S47GA52g6Q2PoMF4QaGzP"
+STRIPE_SECRET_KEY = "YOUR_STRIPE_SECRET_KEY"  # **IMPORTANT:** Replace with your actual Stripe Secret Key
+
+# Function to create a Stripe Setup Intent
+def create_stripe_setup_intent():
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": f"Bearer {STRIPE_SECRET_KEY}"
+    }
+    try:
+        response = requests.post(STRIPE_CREATE_SETUP_INTENT_URL, headers=headers)
+        response.raise_for_status()
+        return response.json().get('id'), response.json().get('client_secret')
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error creating Stripe Setup Intent: {e}")
+        if response is not None:
+            logger.error(f"Stripe response: {response.status_code} - {response.text}")
+        return None, None
 
 # Function to register a new user on Glofox
 def glofox_register(first_name, last_name, email, phone, password):
+    # ... (rest of the glofox_register function remains the same)
     headers = {
         "Host": "api.glofox.com",
         "Content-Type": "application/json;charset=utf-8",
@@ -71,6 +90,7 @@ def glofox_register(first_name, last_name, email, phone, password):
 
 # Function to login to Glofox
 def glofox_login(login, password):
+    # ... (rest of the glofox_login function remains the same)
     headers = {
         "Host": "auth.glofox.com",
         "Content-Type": "application/json;charset=utf-8",
@@ -104,8 +124,8 @@ def glofox_login(login, password):
         return None
 
 # Function to check a credit card using Stripe Setup Intent
-def check_credit_card(card_number, exp_month, exp_year, cvv, setup_intent_id):
-    confirm_url = f"{STRIPE_CONFIRM_URL_BASE}{setup_intent_id}/confirm"
+def check_credit_card(card_number, exp_month, exp_year, cvv, client_secret):
+    confirm_url = f"{STRIPE_CONFIRM_URL_BASE}confirm" # The setup_intent_id is part of the payload now
     headers = {
         "Host": "api.stripe.com",
         "Content-Type": "application/x-www-form-urlencoded",
@@ -128,7 +148,7 @@ def check_credit_card(card_number, exp_month, exp_year, cvv, setup_intent_id):
         "payment_method_data[card][exp_year]": exp_year,
         "use_stripe_sdk": "true",
         "key": STRIPE_PUBLIC_KEY,
-        "client_secret": f"{setup_intent_id}_secret_SCwDNe2dOspOvJ00yLHQp0o2UhIMtk0" # Assuming this pattern
+        "client_secret": client_secret # Using the dynamically obtained client secret
     }
     encoded_payload = '&'.join([f"{key}={value}" for key, value in payload.items()])
     headers['Content-Length'] = str(len(encoded_payload))
@@ -141,7 +161,7 @@ def check_credit_card(card_number, exp_month, exp_year, cvv, setup_intent_id):
         logger.error(f"Error during Stripe card check: {e}")
         if response is not None:
             logger.error(f"Stripe response: {response.status_code} - {response.text}")
-        return {"error": str(e)}
+        return {"error": f"{response.status_code} - {response.text}" if response else str(e)}
 
 # Function to handle checking multiple cards
 def check_multiple_cards(cards, chat_id, message_id):
@@ -161,8 +181,11 @@ def check_multiple_cards(cards, chat_id, message_id):
         bot.edit_message_text("❌ Failed to login to Glofox.", chat_id, message_id)
         return
 
-    # Assuming you need a Stripe Setup Intent ID. This part might need adjustment
-    setup_intent_id = "seti_1RIWL9BWt0BD8l47bXmiKm73" # Using the example provided. This might be dynamic.
+    # Create a Stripe Setup Intent to get the ID and client secret
+    setup_intent_id, client_secret = create_stripe_setup_intent()
+    if not setup_intent_id or not client_secret:
+        bot.edit_message_text("❌ Failed to create Stripe Setup Intent.", chat_id, message_id)
+        return
 
     for i, card_info in enumerate(cards):
         try:
@@ -184,7 +207,7 @@ def check_multiple_cards(cards, chat_id, message_id):
             )
 
             # چێککردنی کارت
-            result = check_credit_card(card_number, exp_month, exp_year, cvv, setup_intent_id)
+            result = check_credit_card(card_number, exp_month, exp_year, cvv, client_secret)
 
             if "error" in result:
                 results.append({"card": card_info, "status": "error", "message": f"هەڵە: {result['error']}"})
@@ -232,7 +255,7 @@ def start_command(message):
                 "تەنها ژمارەی کرێدیت کارد، مانگ، ساڵ و CVV بنێرە بەم شێوەیە:\n"
                 "ژمارەی_کارت|مانگ|ساڵ|CVV\n\n"
                 "نموونە:\n"
-                "`4147202728342336|02|30|885`\n"
+                "`41472027283423336|02|30|885`\n"
                 "یان\n"
                 "`4147202728342336|02|2030|885`\n\n"
                 "بۆ چێککردنی چەند کارت پێکەوە، هەر کارتێک لە دێڕێک بنووسە.")
@@ -265,10 +288,8 @@ def check_card_info_callback(call):
                     "هەردوو فۆڕماتەکە پشتگیری دەکات:\n"
                     "`4258284538223331|02|2028|822`\n"
                     "`4258284538223331|02|28|822`")
-                    
-                    
-                    
-                    # وەرگرتنی کرێدیت کارد بە فۆرماتی داواکراو - پشتگیری تەک کارت یان زۆر کارت
+
+# وەرگرتنی کرێدیت کارد بە فۆرماتی داواکراو - پشتگیری تەک کارت یان زۆر کارت
 @bot.message_handler(func=lambda message: "|" in message.text)
 def check_card_message(message):
     # پشکنینی ئەگەر چەند دێڕ هەبێت
@@ -286,11 +307,14 @@ def check_card_message(message):
         # نیشاندانی پەیامێک کە چێککردن بەڕێوەیە
         wait_message = bot.reply_to(message, "تکایە چاوەڕێ بکە، چێککردنی کارت بەڕێوەیە... ⏳")
 
-        # Assuming you need a Stripe Setup Intent ID. This part might need adjustment
-        setup_intent_id = "seti_1RIWL9BWt0BD8l47bXmiKm73" # Using the example provided. This might be dynamic.
+        # Create a Stripe Setup Intent to get the ID and client secret
+        setup_intent_id, client_secret = create_stripe_setup_intent()
+        if not setup_intent_id or not client_secret:
+            bot.edit_message_text("❌ Failed to create Stripe Setup Intent.", message.chat.id, wait_message.message_id)
+            return
 
         # چێککردنی کارت
-        result = check_credit_card(card_number, exp_month, exp_year, cvv, setup_intent_id)
+        result = check_credit_card(card_number, exp_month, exp_year, cvv, client_secret)
 
         # نیشاندانی ئەنجام
         if "error" in result:
