@@ -15,7 +15,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # تۆکێنی بۆتی تێلێگرام - ئەمە بگۆڕە بە تۆکێنی خۆت
-BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"  # جێگەی تۆکێنی بۆتەکەت دابنێ
+BOT_TOKEN = "7018443911:AAGuZfbkaQc-s2icbMpljkjokKkzg_azkYI"  # جێگەی تۆکێنی بۆتەکەت دابنێ
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
