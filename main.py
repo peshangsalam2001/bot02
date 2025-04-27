@@ -14,7 +14,7 @@ BOT_TOKEN = "7018443911:AAGuZfbkaQc-s2icbMpljkjokKkzg_azkYI"
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Stripe API Keys (Keep these secure!)
-STRIPE_PUBLIC_KEY = "pk_live_51IekcQKHPFAlBzyyGNBguT5BEI7NEBqrTxJhsYN1FI1lQb9iWxU5U2OXfi744NEMx5p7EDXh08YXrudrZkkG9bGc00ZCrkXrxL"
+STRIPE_PUBLIC_KEY = "pk_live_51IekcQKHPFAlBzyyGNBguT5BEI7NEBqrTxJhsYN1FI1lQb9iWxU5U2OXfi744NEMx5p7EDXh08YXrudrZkkG9bGc0ZCrkXrxL"
 STRIPE_ACCOUNT = "acct_1OcwnhGahKpIA11x"
 
 # Resident Urbanist Upgrade URL
@@ -41,7 +41,12 @@ BASE_HEADERS = {
     "Sentry-Trace": "c994fa1d2f624008856162f7a5fed09c-955b9d951224cad8-0",
 }
 
-# Function to generate a random string (as per the RandomString function in the script)
+# Cookies (Attempting to use a simplified cookie - you might need to adjust)
+COOKIES = {
+    "language": "en",
+}
+
+# Function to generate a random string
 def generate_random_string(pattern):
     result = ''
     for char in pattern:
@@ -81,12 +86,17 @@ def perform_upgrade(em_var, pm_var):
     payload = f"email={em_var}%40gmail.com&force_three_d_secure=false&price_id=c5106d42-b50c-440e-8a4e-fafeb2691893&premium_offer_id=&last_resource_guid=&upgrade_error_message=Oops%2C+something+went+wrong.&upgrade_success_message=You+are+now+a+premium+subscriber&payment_method={pm_var}&email=peshangdev%40gmail.com&tax_id=&tax_id_type=&amount_cents=100"
     headers = BASE_HEADERS.copy()
     try:
-        response = requests.post(url, headers=headers, data=payload)
+        response = requests.post(url, headers=headers, data=payload, cookies=COOKIES)
         response.raise_for_status()
+        logging.info(f"Upgrade Response JSON: {response.json()}")
         return response.json()
     except requests.exceptions.RequestException as e:
         logging.error(f"Error in $5_UPGRADE request: {e}")
+        logging.error(f"Upgrade Response Text: {response.text}")
         return {"status": "error", "message": str(e)}
+    except json.JSONDecodeError:
+        logging.error(f"Error decoding JSON in $5_UPGRADE response. Text: {response.text}")
+        return {"status": "error", "message": f"Failed to decode response: {response.text}"}
 
 # Telegram Bot Handlers
 @bot.message_handler(commands=['start'])
@@ -123,7 +133,7 @@ def process_card(message):
                 message_text = upgrade_result.get("message", "Upgrade failed.")
                 bot.reply_to(message, f"Upgrade Status: {status_text}\nMessage: {message_text}")
             else:
-                bot.reply_to(message, "Upgrade attempt failed or status could not be determined.")
+                bot.reply_to(message, f"Upgrade attempt failed or status could not be determined.\nRaw Response: {upgrade_result}")
         else:
             bot.reply_to(message, "Failed to obtain Payment Method ID. Card might be invalid.")
 
