@@ -1,11 +1,9 @@
 import telebot
 import requests
 
-Replace with your actual Telegram bot token
 BOT_TOKEN = '8072279299:AAHAEodRhWpDb2g7EIVNFc3pk1Yg0YlpaPc'
 bot = telebot.TeleBot(BOT_TOKEN)
 
-Store user states and the Stripe public key
 user_states = {}
 stripe_public_key = None
 
@@ -47,19 +45,16 @@ def handle_state(message):
         exp_month = parts[1].strip()
         exp_year = parts[2].strip()
         cvc = parts[3].strip()
-
-Call function to process payment
         create_stripe_token_and_signup(message.chat.id, card_number, exp_month, exp_year, cvc)
         del user_states[message.chat.id]
     else:
         bot.reply_to(message, "Unexpected state. Send /setup to restart.")
 
 def create_stripe_token_and_signup(chat_id, card_number, exp_month, exp_year, cvc):
-Create Stripe token
-    response = requests.post(
+    resp = requests.post(
         'https://api.stripe.com/v1/tokens',
         headers={
-            'Authorization': f'Bearer {stripe_public_key}',  # Normally, you'd use the secret key server-side
+            'Authorization': f'Bearer {stripe_public_key}',
             'Content-Type': 'application/x-www-form-urlencoded'
         },
         data={
@@ -69,22 +64,16 @@ Create Stripe token
             'card[cvc]': cvc
         }
     )
-    resp_json = response.json()
-
-Check for Stripe errors
+    resp_json = resp.json()
     if 'error' in resp_json:
         error_msg = resp_json['error'].get('message', 'Unknown Stripe error')
         bot.send_message(chat_id, f"Stripe error: {error_msg}")
         return
-
     token_id = resp_json.get('id')
     if not token_id:
         bot.send_message(chat_id, "Failed to generate Stripe token.")
         return
-
-    bot.send_message(chat_id, f"Stripe token generated: {token_id}")
-
-Submit signup form with token
+Submit signup form
     signup_response = requests.post(
         'https://www.fireflyapp.com/signup.php',
         headers={
@@ -116,20 +105,19 @@ Submit signup form with token
             'auth_key': ''
         }
     )
-
-Check signup response and provide detailed feedback
+Check response and send detailed result
     if signup_response.status_code == 200:
         bot.send_message(chat_id, "🎉 Signup successful! Your card was accepted.")
     else:
-        error_text = signup_response.text.lower()
-        if 'declined' in error_text:
-            bot.send_message(chat_id, "Your card was declined.")
-        elif 'insufficient funds' in error_text:
-            bot.send_message(chat_id, "Insufficient funds.")
-        elif 'incorrect' in error_text or 'invalid' in error_text:
-            bot.send_message(chat_id, "Invalid card details.")
+        error_text = signup_response.text
+Check for common decline/error indications
+        if 'declined' in error_text.lower():
+            bot.send_message(chat_id, f"Your card was declined.\nResponse:\n{error_text}")
+        elif 'insufficient funds' in error_text.lower():
+            bot.send_message(chat_id, f"Insufficient funds.\nResponse:\n{error_text}")
+        elif 'invalid' in error_text.lower() or 'incorrect' in error_text.lower():
+            bot.send_message(chat_id, f"Invalid card details.\nResponse:\n{error_text}")
         else:
-            bot.send_message(chat_id, f"Signup failed or unknown response: {signup_response.text}")
+            bot.send_message(chat_id, f"Signup failed.\nResponse:\n{error_text}")
 
-Run the bot
 bot.polling()
