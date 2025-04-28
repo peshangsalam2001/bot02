@@ -1,4 +1,4 @@
-
+import telebot
 import requests
 
 # Initialize global variables
