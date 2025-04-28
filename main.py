@@ -1,81 +1,125 @@
-import telebot
+
 import requests
-import logging
 
-# Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Initialize global variables
+stripe_key = None
+bot_token = '8072279299:AAHAEodRhWpDb2g7EIVNFc3pk1Yg0YlpaPc'  # Replace with your bot token
+bot = telebot.TeleBot(bot_token)
 
-# Replace with your actual Telegram Bot Token
-BOT_TOKEN = "8072279299:AAHAEodRhWpDb2g7EIVNFc3pk1Yg0YlpaPc"
-bot = telebot.TeleBot(BOT_TOKEN)
-
-FIREFLY_SIGNUP_URL = "https://www.fireflyapp.com/signup.php"
-FIREFLY_HEADERS = {
-    "content-type": "application/x-www-form-urlencoded",
-    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "accept-language": "en-US,en;q=0.9",
-    "accept-encoding": "gzip, deflate, br",
-    "sec-fetch-mode": "navigate",
-    "origin": "https://www.fireflyapp.com",
-    "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.6723.37 Mobile/15E148 Safari/604.1",
-    "referer": "https://www.fireflyapp.com/signup.php",
-    "sec-fetch-dest": "document",
-}
+# Track user states
+user_states = {}
 
 @bot.message_handler(commands=['start'])
-def send_welcome(message):
-    bot.reply_to(message, "Welcome! Please provide the signup details in the following format:\n\nsubdomain|name|email|password|stripeToken")
+def start(message):
+    bot.reply_to(message, "Welcome! Please send /setup to configure your secret key.")
 
-@bot.message_handler(func=lambda message: len(message.text.split('|')) == 5)
-def signup_firefly(message):
-    try:
-        subdomain, name, email, password, stripe_token = message.text.split('|')
+@bot.message_handler(commands=['setup'])
+def setup(message):
+    bot.send_message(message.chat.id, "Please send me your Stripe secret key.")
+    user_states[message.chat.id] = {'step': 'waiting_for_stripe_key'}
 
-        payload = {
-            "subdomain": subdomain,
-            "item": "item_1",  # Assuming a default item
-            "name": name,
-            "email": email,
-            "reg_password": password,
-            "reg_password_confirmation": password,
-            "account_info": "1",
-            "company": "",
-            "address": "YOUR_ADDRESS",  # You might need to collect this or hardcode a default
-            "country": "US",             # Assuming US, adjust if needed
-            "state": "NJ",               # Assuming NJ, adjust if needed
-            "city": "YOUR_CITY",         # You might need to collect this or hardcode a default
-            "zip": "YOUR_ZIP",           # You might need to collect this or hardcode a default
-            "phone": "YOUR_PHONE",       # You might need to collect this or hardcode a default
-            "pay_type": "card",
-            "stripeToken": stripe_token,
-            "terms_and_policies": "1",
-            "timezoneoffset": "-180",    # Assuming a default offset
-            "time_zone": "Asia/Baghdad",  # Assuming a default timezone
-            "lang": "en-US",
-            "main_page": "677000bf050fed682c237e7b4c7cb9aa", # Assuming a default
-            "auth_key": "",
+@bot.message_handler(func=lambda msg: msg.chat.id in user_states)
+def handle_setup(message):
+    state = user_states[message.chat.id]
+    if state['step'] == 'waiting_for_stripe_key':
+        global stripe_key
+        stripe_key = message.text.strip()
+        user_states[message.chat.id]['step'] = 'ready'
+        bot.reply_to(message, "Stripe secret key received! Send /pay to proceed.")
+    elif state['step'] == 'waiting_for_card_details':
+        # Expecting all details in one message
+        parts = message.text.split(',')
+        if len(parts) != 4:
+            bot.reply_to(message, "Invalid format. Please send details as:\nNumber, Month, Year, CVC")
+            return
+        card_number = parts[0].strip()
+        exp_month = parts[1].strip()
+        exp_year = parts[2].strip()
+        cvc = parts[3].strip()
+
+        # Proceed with payment
+        process_payment(message.chat.id, card_number, exp_month, exp_year, cvc)
+        del user_states[message.chat.id]
+    else:
+        bot.reply_to(message, "Unexpected state. Send /setup to start again.")
+
+@bot.message_handler(commands=['pay'])
+def ask_for_card(message):
+    if not stripe_key:
+        bot.reply_to(message, "Please first set up your Stripe secret key with /setup")
+        return
+    bot.send_message(message.chat.id,
+        "Enter your credit card details in this format:\n"
+        "Number, Month, Year, CVC\n"
+        "Example:\n4242424242424242, 12, 2024, 123")
+    user_states[message.chat.id] = {'step': 'waiting_for_card_details'}
+
+def process_payment(chat_id, card_number, exp_month, exp_year, cvc):
+    email = f"user_{chat_id}@example.com"  # Generate email
+
+    # Create Stripe payment method
+    response = requests.post(
+        "https://api.stripe.com/v1/payment_methods",
+        headers={
+            "Authorization": f"Bearer {stripe_key}",
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        data={
+            "type": "card",
+            "billing_details[email]": email,
+            "card[number]": card_number,
+            "card[cvc]": cvc,
+            "card[exp_month]": exp_month,
+            "card[exp_year]": exp_year
         }
+    )
 
-        response = requests.post(FIREFLY_SIGNUP_URL, headers=FIREFLY_HEADERS, data=payload)
-        response.raise_for_status()
+    resp_json = response.json()
+    payment_method_id = resp_json.get('id', '')
 
-        if "congratulations" in response.text.lower():
-            bot.reply_to(message, "Signup successful!")
-        else:
-            bot.reply_to(message, f"Signup failed. Response from server:\n{response.text}")
+    if not payment_method_id:
+        bot.send_message(chat_id, f"Failed to create payment method: {resp_json.get('error', resp_json)}")
+        return
 
-    except requests.exceptions.RequestException as e:
-        bot.reply_to(message, f"Error during signup request: {e}")
-    except ValueError:
-        bot.reply_to(message, "Invalid input format. Please use: subdomain|name|email|password|stripeToken")
-    except Exception as e:
-        logging.error(f"An unexpected error occurred: {e}")
-        bot.reply_to(message, f"An unexpected error occurred: {e}")
+    bot.send_message(chat_id, f"Payment method created: {payment_method_id}")
 
-@bot.message_handler(func=lambda message: True)
-def echo_all(message):
-    bot.reply_to(message, "Send /start to begin the Firefly III signup process.")
+    # Proceed with upgrade
+    upgrade_response = requests.post(
+        "https://www.residenturbanist.com/upgrade?_data=routes%2Fupgrade",
+        headers={
+            "Accept": "*/*",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Origin": "https://www.residenturbanist.com",
+            "Referer": "https://www.residenturbanist.com/upgrade",
+            "User-Agent": "Mozilla/5.0"
+        },
+        data={
+            "email": email,
+            "force_three_d_secure": "false",
+            "price_id": "c5106d42-b50c-440e-8a4e-fafeb2691893",
+            "upgrade_error_message": "Oops, something went wrong.",
+            "upgrade_success_message": "You are now a premium subscriber",
+            "payment_method": payment_method_id,
+            "tax_id": "",
+            "tax_id_type": "",
+            "amount_cents": "100"
+        }
+    )
 
-if __name__ == '__main__':
-    logging.info("Bot started...")
-    bot.polling(none_stop=True)
+    try:
+        json_resp = upgrade_response.json()
+        status = json_resp.get('status', '')
+        message_text = json_resp.get('message', '')
+    except:
+        status = ''
+        message_text = upgrade_response.text
+
+    if "success" in status.lower():
+        bot.send_message(chat_id, f"Upgrade successful: {message_text}")
+    elif "error" in status.lower():
+        bot.send_message(chat_id, f"Upgrade failed: {message_text}")
+    else:
+        bot.send_message(chat_id, f"Response: {message_text}")
+
+# Run the bot
+bot.polling()
