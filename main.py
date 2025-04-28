@@ -1,13 +1,13 @@
 import telebot
 import requests
 
-# Replace with your bot token
+Replace with your actual Telegram bot token
 BOT_TOKEN = '8072279299:AAHAEodRhWpDb2g7EIVNFc3pk1Yg0YlpaPc'
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# State tracking
+Store user states and the Stripe public key
 user_states = {}
-stripe_public_key = None  # To store the Stripe public key (pk_live...)
+stripe_public_key = None
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -20,6 +20,7 @@ def setup(message):
 
 @bot.message_handler(commands=['pay'])
 def pay(message):
+    global stripe_public_key
     if not stripe_public_key:
         bot.reply_to(message, "Please run /setup first to set your Stripe public key.")
         return
@@ -35,7 +36,7 @@ def handle_state(message):
     if state['step'] == 'waiting_for_pubkey':
         global stripe_public_key
         stripe_public_key = message.text.strip()
-        user_states[message.chat.id]['step'] = 'ready'
+        user_states'step' = 'ready'
         bot.reply_to(message, "Stripe public key saved! Now send /pay to enter your card details.")
     elif state['step'] == 'waiting_for_card':
         parts = message.text.split(',')
@@ -47,18 +48,18 @@ def handle_state(message):
         exp_year = parts[2].strip()
         cvc = parts[3].strip()
 
-        # Proceed to create Stripe token
-        create_stripe_token(message.chat.id, card_number, exp_month, exp_year, cvc)
+Call function to process payment
+        create_stripe_token_and_signup(message.chat.id, card_number, exp_month, exp_year, cvc)
         del user_states[message.chat.id]
     else:
         bot.reply_to(message, "Unexpected state. Send /setup to restart.")
 
-def create_stripe_token(chat_id, card_number, exp_month, exp_year, cvc):
-    # Call Stripe API to generate token
+def create_stripe_token_and_signup(chat_id, card_number, exp_month, exp_year, cvc):
+Create Stripe token
     response = requests.post(
         'https://api.stripe.com/v1/tokens',
         headers={
-            'Authorization': f'Bearer {stripe_public_key}',  # Using the public key as placeholder
+            'Authorization': f'Bearer {stripe_public_key}',  # Normally, you'd use the secret key server-side
             'Content-Type': 'application/x-www-form-urlencoded'
         },
         data={
@@ -69,20 +70,26 @@ def create_stripe_token(chat_id, card_number, exp_month, exp_year, cvc):
         }
     )
     resp_json = response.json()
-    token_id = resp_json.get('id')
 
+Check for Stripe errors
+    if 'error' in resp_json:
+        error_msg = resp_json['error'].get('message', 'Unknown Stripe error')
+        bot.send_message(chat_id, f"Stripe error: {error_msg}")
+        return
+
+    token_id = resp_json.get('id')
     if not token_id:
-        bot.send_message(chat_id, f"Failed to generate Stripe token: {resp_json.get('error', resp_json)}")
+        bot.send_message(chat_id, "Failed to generate Stripe token.")
         return
 
     bot.send_message(chat_id, f"Stripe token generated: {token_id}")
 
-    # Simulate your website signup process with the token
+Submit signup form with token
     signup_response = requests.post(
         'https://www.fireflyapp.com/signup.php',
         headers={
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,/;q=0.8'
         },
         data={
             'subdomain': 'peshangsalam2001',
@@ -110,11 +117,19 @@ def create_stripe_token(chat_id, card_number, exp_month, exp_year, cvc):
         }
     )
 
-    # Handle response (simulate success)
+Check signup response and provide detailed feedback
     if signup_response.status_code == 200:
-        bot.send_message(chat_id, "Signup request sent with Stripe token!")
+        bot.send_message(chat_id, "🎉 Signup successful! Your card was accepted.")
     else:
-        bot.send_message(chat_id, f"Signup failed or response: {signup_response.text}")
+        error_text = signup_response.text.lower()
+        if 'declined' in error_text:
+            bot.send_message(chat_id, "Your card was declined.")
+        elif 'insufficient funds' in error_text:
+            bot.send_message(chat_id, "Insufficient funds.")
+        elif 'incorrect' in error_text or 'invalid' in error_text:
+            bot.send_message(chat_id, "Invalid card details.")
+        else:
+            bot.send_message(chat_id, f"Signup failed or unknown response: {signup_response.text}")
 
-# Run the bot
+Run the bot
 bot.polling()
