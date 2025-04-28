@@ -34,7 +34,7 @@ def handle_state(message):
     if state['step'] == 'waiting_for_pubkey':
         global stripe_public_key
         stripe_public_key = message.text.strip()
-        user_states'step' = 'ready'
+        user_states[message.chat.id]['step'] = 'ready'
         bot.reply_to(message, "Stripe public key saved! Now send /pay to enter your card details.")
     elif state['step'] == 'waiting_for_card':
         parts = message.text.split(',')
@@ -73,12 +73,12 @@ def create_stripe_token_and_signup(chat_id, card_number, exp_month, exp_year, cv
     if not token_id:
         bot.send_message(chat_id, "Failed to generate Stripe token.")
         return
-Submit signup form
+    # Submit signup form
     signup_response = requests.post(
         'https://www.fireflyapp.com/signup.php',
         headers={
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,/;q=0.8'
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
         },
         data={
             'subdomain': 'peshangsalam2001',
@@ -105,12 +105,11 @@ Submit signup form
             'auth_key': ''
         }
     )
-Check response and send detailed result
+    # Check response and send detailed result
     if signup_response.status_code == 200:
         bot.send_message(chat_id, "🎉 Signup successful! Your card was accepted.")
     else:
         error_text = signup_response.text
-Check for common decline/error indications
         if 'declined' in error_text.lower():
             bot.send_message(chat_id, f"Your card was declined.\nResponse:\n{error_text}")
         elif 'insufficient funds' in error_text.lower():
