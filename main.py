@@ -3,7 +3,7 @@ import requests
 
 # Initialize global variables
 stripe_key = None
-bot_token = '8072279299:AAHAEodRhWpDb2g7EIVNFc3pk1Yg0YlpaPc'  # Replace with your bot token
+bot_token = '8072279299:AAHAEodRhWpDb2g7EIVNFc3pk1Yg0YlpaPc'  # Replace with your actual bot token
 bot = telebot.TeleBot(bot_token)
 
 # Track user states
@@ -11,23 +11,37 @@ user_states = {}
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.reply_to(message, "Welcome! Please send /setup to configure your secret key.")
+    bot.reply_to(message, "Welcome! First, send /setup to configure your Stripe secret key.")
 
 @bot.message_handler(commands=['setup'])
 def setup(message):
     bot.send_message(message.chat.id, "Please send me your Stripe secret key.")
     user_states[message.chat.id] = {'step': 'waiting_for_stripe_key'}
 
+@bot.message_handler(commands=['pay'])
+def pay(message):
+    # Check if stripe_key is set
+    global stripe_key
+    if not stripe_key:
+        bot.reply_to(message, "Please run /setup first to set your Stripe secret key.")
+        return
+    bot.send_message(message.chat.id,
+        "Enter your credit card details in this format:\n"
+        "Number, Month, Year, CVC\n"
+        "Example:\n4242424242424242, 12, 2024, 123")
+    user_states[message.chat.id] = {'step': 'waiting_for_card_details'}
+
 @bot.message_handler(func=lambda msg: msg.chat.id in user_states)
-def handle_setup(message):
+def handle_state(message):
     state = user_states[message.chat.id]
     if state['step'] == 'waiting_for_stripe_key':
+        # Save the secret key
         global stripe_key
         stripe_key = message.text.strip()
         user_states[message.chat.id]['step'] = 'ready'
-        bot.reply_to(message, "Stripe secret key received! Send /pay to proceed.")
+        bot.reply_to(message, "Stripe secret key received! Now send /pay to enter your card details.")
     elif state['step'] == 'waiting_for_card_details':
-        # Expecting all details in one message
+        # Parse card details
         parts = message.text.split(',')
         if len(parts) != 4:
             bot.reply_to(message, "Invalid format. Please send details as:\nNumber, Month, Year, CVC")
@@ -42,17 +56,6 @@ def handle_setup(message):
         del user_states[message.chat.id]
     else:
         bot.reply_to(message, "Unexpected state. Send /setup to start again.")
-
-@bot.message_handler(commands=['pay'])
-def ask_for_card(message):
-    if not stripe_key:
-        bot.reply_to(message, "Please first set up your Stripe secret key with /setup")
-        return
-    bot.send_message(message.chat.id,
-        "Enter your credit card details in this format:\n"
-        "Number, Month, Year, CVC\n"
-        "Example:\n4242424242424242, 12, 2024, 123")
-    user_states[message.chat.id] = {'step': 'waiting_for_card_details'}
 
 def process_payment(chat_id, card_number, exp_month, exp_year, cvc):
     email = f"user_{chat_id}@example.com"  # Generate email
