@@ -1,4 +1,4 @@
-
+import telebot
 import requests
 
 # Replace with your bot token
