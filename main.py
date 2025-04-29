@@ -37,21 +37,20 @@ def make_payment_request(email, card_number, card_cvc, exp_month, exp_year, post
 def upgrade_subscription(email, payment_method_id):
     upgrade_url = "https://onedtech.philhillaa.com/upgrade?_data=routes%2Fupgrade"
     
+    # Prepare the payload with the payment method ID
     payload = {
         "email": email,
         "force_three_d_secure": "false",
         "price_id": "667c8b20-9c72-4dc4-ad7b-988e543540db",
         "premium_offer_id": "136d8db6-f95f-42c5-bc6c-8fa6f824ef5b",
-        "payment_method": payment_method_id,
+        "payment_method": payment_method_id,  # Use the pm_ value from the first URL response
         "amount_cents": 100
     }
     
     headers = {
         "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
         "Accept": "*/*",
-        "User-Agent": "Mozilla/5.0",
-        # Include the account ID if using a connected account
-        "Stripe-Account": "acct_1H9yl8CUM6LudCBL"  # Replace with your actual connected account ID if necessary
+        "User-Agent": "Mozilla/5.0"
     }
     
     response = requests.post(upgrade_url, data=payload, headers=headers)
@@ -86,7 +85,7 @@ def get_card_details(message):
         payment_method_id = make_payment_request(email, card_number, card_cvc, exp_month, exp_year, postal_code)
 
         if payment_method_id:
-            # Upgrade subscription
+            # Upgrade subscription using the newly created payment method ID
             upgrade_response = upgrade_subscription(email, payment_method_id)
             if upgrade_response:
                 message_response = upgrade_response.get('toast', {}).get('message', 'Unknown error')
