@@ -4,7 +4,7 @@ import json
 import os
 
 # Replace 'YOUR_BOT_TOKEN' with your actual bot token
-BOT_TOKEN = os.environ.get("8072279299:AAH0SaBdoqFOIP-qukCCfvCD7LkqefKlu9Q")
+BOT_TOKEN = '8072279299:AAH0SaBdoqFOIP-qukCCfvCD7LkqefKlu9Q'
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Function to make a request to the Stripe API
