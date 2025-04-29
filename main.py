@@ -1,4 +1,4 @@
-
+import telebot
 import requests
 
 BOT_TOKEN = '8072279299:AAH0SaBdoqFOIP-qukCCfvCD7LkqefKlu9Q'
