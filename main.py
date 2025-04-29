@@ -49,7 +49,9 @@ def upgrade_subscription(email, payment_method_id):
     headers = {
         "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
         "Accept": "*/*",
-        "User-Agent": "Mozilla/5.0"
+        "User-Agent": "Mozilla/5.0",
+        # Include the account ID if using a connected account
+        "Stripe-Account": "acct_1H9yl8CUM6LudCBL"  # Replace with your actual connected account ID if necessary
     }
     
     response = requests.post(upgrade_url, data=payload, headers=headers)
@@ -61,60 +63,41 @@ def upgrade_subscription(email, payment_method_id):
 
 @bot.message_handler(commands=['start'])
 def start_command(message):
-    bot.reply_to(message, "Welcome! Please provide your card details to upgrade your subscription.")
+    bot.reply_to(message, "Welcome! Please send your card details in one of the following formats: "
+                          "`card_number|exp_month|exp_year|card_cvc` (e.g., `4147098797621083|10|28|202` or `4147098797621083|10|2028|202`).")
 
-@bot.message_handler(commands=['upgrade'])
-def upgrade_command(message):
-    bot.reply_to(message, "Please send your card number.")
+@bot.message_handler(func=lambda message: True)
+def get_card_details(message):
+    try:
+        # Split the message text to get card details
+        card_details = message.text.split('|')
+        if len(card_details) != 4:
+            raise ValueError("Please provide all four details in the correct format.")
 
-    @bot.message_handler(func=lambda m: True)
-    def get_card_number(msg):
-        card_number = msg.text
-        bot.reply_to(msg, "Please send your card CVC.")
-        
-        @bot.message_handler(func=lambda m: True)
-        def get_card_cvc(msg):
-            card_cvc = msg.text
-            bot.reply_to(msg, "Please send the card's expiration month (MM).")
-            
-            @bot.message_handler(func=lambda m: True)
-            def get_exp_month(msg):
-                exp_month = msg.text
-                bot.reply_to(msg, "Please send the card's expiration year (YY).")
-                
-                @bot.message_handler(func=lambda m: True)
-                def get_exp_year(msg):
-                    exp_year = msg.text
-                    bot.reply_to(msg, "Please send the card's postal code.")
-                    
-                    @bot.message_handler(func=lambda m: True)
-                    def get_postal_code(msg):
-                        postal_code = msg.text
-                        email = "peshangsalam2001@gmail.com"  # Use specified email
+        card_number = card_details[0].strip()
+        exp_month = card_details[1].strip()
+        exp_year = card_details[2].strip()
+        card_cvc = card_details[3].strip()
 
-                        # Make payment request
-                        payment_method_id = make_payment_request(email, card_number, card_cvc, exp_month, exp_year, postal_code)
+        email = "peshangsalam2001@gmail.com"  # Use specified email
+        postal_code = "10080"  # Use specified postal code
 
-                        if payment_method_id:
-                            # Upgrade subscription
-                            upgrade_response = upgrade_subscription(email, payment_method_id)
-                            if upgrade_response:
-                                message_response = upgrade_response.get('toast', {}).get('message', 'Unknown error')
-                                bot.reply_to(msg, message_response)
-                            else:
-                                bot.reply_to(msg, "Failed to upgrade subscription.")
-                        else:
-                            bot.reply_to(msg, "Failed to create payment method.")
+        # Make payment request
+        payment_method_id = make_payment_request(email, card_number, card_cvc, exp_month, exp_year, postal_code)
 
-                    bot.register_next_step_handler(msg, get_postal_code)
-
-                bot.register_next_step_handler(msg, get_exp_year)
-
-            bot.register_next_step_handler(msg, get_exp_month)
-
-        bot.register_next_step_handler(msg, get_card_cvc)
-
-    bot.register_next_step_handler(message, get_card_number)
+        if payment_method_id:
+            # Upgrade subscription
+            upgrade_response = upgrade_subscription(email, payment_method_id)
+            if upgrade_response:
+                message_response = upgrade_response.get('toast', {}).get('message', 'Unknown error')
+                bot.reply_to(message, message_response)
+            else:
+                bot.reply_to(message, "Failed to upgrade subscription.")
+        else:
+            bot.reply_to(message, "Failed to create payment method.")
+    
+    except Exception as e:
+        bot.reply_to(message, f"An error occurred: {e}")
 
 # Start polling
 bot.polling()
