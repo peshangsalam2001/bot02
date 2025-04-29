@@ -5,8 +5,8 @@ import requests
 BOT_TOKEN = '8072279299:AAH0SaBdoqFOIP-qukCCfvCD7LkqefKlu9Q'
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Function to make a request to the Stripe API
-def make_payment_request(email, card_number, card_cvc, exp_month, exp_year, postal_code):
+# Function to create a Payment Method
+def create_payment_method(email, card_number, card_cvc, exp_month, exp_year, postal_code):
     payment_method_url = "https://api.stripe.com/v1/payment_methods"
     
     payload = {
@@ -22,8 +22,7 @@ def make_payment_request(email, card_number, card_cvc, exp_month, exp_year, post
     
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "application/json",
-        "User-Agent": "Mozilla/5.0"
+        "Accept": "application/json"
     }
 
     response = requests.post(payment_method_url, data=payload, headers=headers)
@@ -37,20 +36,18 @@ def make_payment_request(email, card_number, card_cvc, exp_month, exp_year, post
 def upgrade_subscription(email, payment_method_id):
     upgrade_url = "https://onedtech.philhillaa.com/upgrade?_data=routes%2Fupgrade"
     
-    # Prepare the payload with the payment method ID
     payload = {
         "email": email,
         "force_three_d_secure": "false",
         "price_id": "667c8b20-9c72-4dc4-ad7b-988e543540db",
         "premium_offer_id": "136d8db6-f95f-42c5-bc6c-8fa6f824ef5b",
-        "payment_method": payment_method_id,  # Use the pm_ value from the first URL response
+        "payment_method": payment_method_id,
         "amount_cents": 100
     }
     
     headers = {
         "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-        "Accept": "*/*",
-        "User-Agent": "Mozilla/5.0"
+        "Accept": "*/*"
     }
     
     response = requests.post(upgrade_url, data=payload, headers=headers)
@@ -63,7 +60,7 @@ def upgrade_subscription(email, payment_method_id):
 @bot.message_handler(commands=['start'])
 def start_command(message):
     bot.reply_to(message, "Welcome! Please send your card details in one of the following formats: "
-                          "`card_number|exp_month|exp_year|card_cvc` (e.g., `4147098797621083|10|28|202` or `4147098797621083|10|2028|202`).")
+                          "`card_number|exp_month|exp_year|card_cvc` (e.g., `4147098797621083|10|2028|202`).")
 
 @bot.message_handler(func=lambda message: True)
 def get_card_details(message):
@@ -81,11 +78,11 @@ def get_card_details(message):
         email = "peshangsalam2001@gmail.com"  # Use specified email
         postal_code = "10080"  # Use specified postal code
 
-        # Make payment request
-        payment_method_id = make_payment_request(email, card_number, card_cvc, exp_month, exp_year, postal_code)
+        # Create Payment Method
+        payment_method_id = create_payment_method(email, card_number, card_cvc, exp_month, exp_year, postal_code)
 
         if payment_method_id:
-            # Upgrade subscription using the newly created payment method ID
+            # Upgrade Subscription using the payment method ID
             upgrade_response = upgrade_subscription(email, payment_method_id)
             if upgrade_response:
                 message_response = upgrade_response.get('toast', {}).get('message', 'Unknown error')
