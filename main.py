@@ -53,9 +53,18 @@ def upgrade_subscription(email, payment_method_id):
     response = requests.post(upgrade_url, data=payload, headers=headers)
 
     if response.status_code == 200:
-        return response.json()
+        response_data = response.json()
+        # Check for success or specific error messages
+        if "success" in response_data.get('upgrade_success_message', '').lower():
+            return "Your card has been successfully charged."
+        elif "declined" in response_data.get('upgrade_error_message', '').lower():
+            return "Your card was declined."
+        elif "insufficient funds" in response_data.get('upgrade_error_message', '').lower():
+            return "Insufficient funds on your card."
+        else:
+            return "An unknown error occurred."
     else:
-        return None
+        return "Failed to upgrade the subscription."
 
 @bot.message_handler(commands=['start'])
 def start_command(message):
@@ -83,12 +92,8 @@ def get_card_details(message):
 
         if payment_method_id:
             # Upgrade Subscription using the payment method ID
-            upgrade_response = upgrade_subscription(email, payment_method_id)
-            if upgrade_response:
-                message_response = upgrade_response.get('toast', {}).get('message', 'Unknown error')
-                bot.reply_to(message, message_response)
-            else:
-                bot.reply_to(message, "Failed to upgrade subscription.")
+            upgrade_response_message = upgrade_subscription(email, payment_method_id)
+            bot.reply_to(message, upgrade_response_message)
         else:
             bot.reply_to(message, "Failed to create payment method.")
     
