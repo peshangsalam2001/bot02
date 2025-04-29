@@ -1,6 +1,6 @@
 import telebot
 import json
-import telebot
+import requests
 
 # Your Telegram bot token
 BOT_TOKEN = '8072279299:AAH0SaBdoqFOIP-qukCCfvCD7LkqefKlu9Q'
