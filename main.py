@@ -73,7 +73,6 @@ def create_stripe_token_and_signup(chat_id, card_number, exp_month, exp_year, cv
     if not token_id:
         bot.send_message(chat_id, "Failed to generate Stripe token.")
         return
-    # Submit signup form
     signup_response = requests.post(
         'https://www.fireflyapp.com/signup.php',
         headers={
@@ -105,18 +104,7 @@ def create_stripe_token_and_signup(chat_id, card_number, exp_month, exp_year, cv
             'auth_key': ''
         }
     )
-    # Check response and send detailed result
-    if signup_response.status_code == 200:
-        bot.send_message(chat_id, "🎉 Signup successful! Your card was accepted.")
-    else:
-        error_text = signup_response.text
-        if 'declined' in error_text.lower():
-            bot.send_message(chat_id, f"Your card was declined.\nResponse:\n{error_text}")
-        elif 'insufficient funds' in error_text.lower():
-            bot.send_message(chat_id, f"Insufficient funds.\nResponse:\n{error_text}")
-        elif 'invalid' in error_text.lower() or 'incorrect' in error_text.lower():
-            bot.send_message(chat_id, f"Invalid card details.\nResponse:\n{error_text}")
-        else:
-            bot.send_message(chat_id, f"Signup failed.\nResponse:\n{error_text}")
+    full_response_text = signup_response.text
+    bot.send_message(chat_id, full_response_text)
 
 bot.polling()
