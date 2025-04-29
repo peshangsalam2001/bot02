@@ -1,5 +1,6 @@
 import telebot
 import requests
+import uuid
 
 BOT_TOKEN = '8072279299:AAH0SaBdoqFOIP-qukCCfvCD7LkqefKlu9Q'
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -34,7 +35,7 @@ def handle_state(message):
     if state['step'] == 'waiting_for_pubkey':
         global stripe_public_key
         stripe_public_key = message.text.strip()
-        user_states[message.chat.id]['step'] = 'ready'
+        user_states'step' = 'ready'
         bot.reply_to(message, "Stripe public key saved! Now send /pay to enter your card details.")
     elif state['step'] == 'waiting_for_card':
         parts = message.text.split(',')
@@ -73,17 +74,20 @@ def create_stripe_token_and_signup(chat_id, card_number, exp_month, exp_year, cv
     if not token_id:
         bot.send_message(chat_id, "Failed to generate Stripe token.")
         return
+Generate unique Gmail email
+    unique_email = f"user_{uuid.uuid4().hex}@gmail.com"
+Submit signup form
     signup_response = requests.post(
         'https://www.fireflyapp.com/signup.php',
         headers={
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,/;q=0.8'
         },
         data={
             'subdomain': 'peshangsalam2001',
             'item': 'item_1',
             'name': 'Peshang Salam',
-            'email': 'peshangsalam2001@gmail.com',
+            'email': unique_email,
             'reg_password': 'War112233$%',
             'reg_password_confirmation': 'War112233$%',
             'account_info': '1',
