@@ -75,7 +75,9 @@ def handle_card(message):
 
         # Parse the response from second URL
         resp_text = second_response.text
+        print("Raw response:", resp_text)
         resp_json = json.loads(resp_text)
+
 
         # Check for decline or success
         if 'toast' in resp_json:
