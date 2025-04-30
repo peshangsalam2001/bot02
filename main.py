@@ -5,7 +5,7 @@ import urllib.parse
 BOT_TOKEN = "8072279299:AAF7-9MjDIYkoH6iuDztpbSmyQBvz3kRjG0"
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Fixed email, phone, and zip code as requested
+# Fixed values as requested
 FIXED_EMAIL = "peshangsalam2001@gmail.com"
 FIXED_PHONE = "+13144740467"
 FIXED_ZIP = "BA3 HAL"
@@ -26,7 +26,7 @@ def card_handler(message):
 
         with requests.Session() as session:
             # Step 1: Get CSRF cookie and session cookies
-            csrf_resp = session.get(
+            session.get(
                 "https://api.pocketpa.com/sanctum/csrf-cookie",
                 headers={
                     "ppa-locale": "en",
@@ -40,7 +40,7 @@ def card_handler(message):
             raw_token = session.cookies.get("XSRF-TOKEN", "")
             xsrf_token = urllib.parse.unquote(raw_token)
 
-            # Prepare payload with fixed email, phone, zip code
+            # Prepare payload with fixed email, phone, zip code, and is_affiliate
             payload = {
                 "name": "Telegram User",
                 "email": FIXED_EMAIL,
@@ -50,6 +50,7 @@ def card_handler(message):
                 "locale": "en",
                 "plan_id": "price_1NK6JMDuSyQMYtIMfauDnsfM",
                 "zip_code": FIXED_ZIP,
+                "is_affiliate": False,
                 "card": {
                     "number": card_number.replace(" ", ""),
                     "exp_month": exp_month.zfill(2),
@@ -73,7 +74,8 @@ def card_handler(message):
             )
 
             resp_json = response.json()
-            # Send both status and full JSON response back to user
+
+            # Reply with status code and full JSON response
             status_msg = f"Status code: {response.status_code}\nResponse JSON:\n{resp_json}"
             bot.reply_to(message, status_msg)
 
