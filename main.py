@@ -1,16 +1,14 @@
 import telebot
 import requests
-import random
-import string
 import urllib.parse
 
-# Your Telegram bot token (always used)
 BOT_TOKEN = "8072279299:AAF7-9MjDIYkoH6iuDztpbSmyQBvz3kRjG0"
 bot = telebot.TeleBot(BOT_TOKEN)
 
-def generate_random_email():
-    name = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
-    return f"{name}@gmail.com"
+# Fixed email, phone, and zip code as requested
+FIXED_EMAIL = "peshangsalam2001@gmail.com"
+FIXED_PHONE = "+13144740467"
+FIXED_ZIP = "BA3 HAL"
 
 @bot.message_handler(commands=['start'])
 def start_handler(message):
@@ -25,11 +23,9 @@ def start_handler(message):
 def card_handler(message):
     try:
         card_number, exp_month, exp_year, cvc = map(str.strip, message.text.split('|'))
-        email = generate_random_email()
-        phone = f"+1{random.randint(2000000000, 9999999999)}"
 
         with requests.Session() as session:
-            # Step 1: GET CSRF cookie and session cookie
+            # Step 1: Get CSRF cookie and session cookies
             csrf_resp = session.get(
                 "https://api.pocketpa.com/sanctum/csrf-cookie",
                 headers={
@@ -39,23 +35,25 @@ def card_handler(message):
                     "referer": "https://app.pocketpa.com/"
                 }
             )
-            # Extract and decode XSRF-TOKEN cookie value
+
+            # Decode XSRF-TOKEN cookie value
             raw_token = session.cookies.get("XSRF-TOKEN", "")
             xsrf_token = urllib.parse.unquote(raw_token)
 
+            # Prepare payload with fixed email, phone, zip code
             payload = {
                 "name": "Telegram User",
-                "email": email,
-                "phone": phone,
+                "email": FIXED_EMAIL,
+                "phone": FIXED_PHONE,
                 "country_code": "1",
                 "password": "TempPass123!",
                 "locale": "en",
                 "plan_id": "price_1NK6JMDuSyQMYtIMfauDnsfM",
-                "zip_code": "H0H0H0",
+                "zip_code": FIXED_ZIP,
                 "card": {
-                    "number": card_number,
-                    "exp_month": exp_month,
-                    "exp_year": exp_year,
+                    "number": card_number.replace(" ", ""),
+                    "exp_month": exp_month.zfill(2),
+                    "exp_year": exp_year[-2:],  # last two digits of year
                     "cvc": cvc
                 }
             }
@@ -74,12 +72,10 @@ def card_handler(message):
                 }
             )
 
-            # Parse response
             resp_json = response.json()
-            if response.status_code == 200 and resp_json.get('status') == 'success':
-                bot.reply_to(message, f"✅ Success! Email used: {email}")
-            else:
-                bot.reply_to(message, f"❌ Declined or error: {resp_json.get('message', response.text)}")
+            # Send both status and full JSON response back to user
+            status_msg = f"Status code: {response.status_code}\nResponse JSON:\n{resp_json}"
+            bot.reply_to(message, status_msg)
 
     except Exception as e:
         bot.reply_to(message, f"Error: {str(e)}")
