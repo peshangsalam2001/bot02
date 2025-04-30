@@ -1,14 +1,18 @@
 import telebot
 import requests
 import urllib.parse
+import random
+import string
 
 BOT_TOKEN = "8072279299:AAF7-9MjDIYkoH6iuDztpbSmyQBvz3kRjG0"
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Fixed values as requested
-FIXED_EMAIL = "peshangsalam2001@gmail.com"
 FIXED_PHONE = "+13144740467"
 FIXED_ZIP = "BA3 HAL"
+
+def generate_random_email():
+    name = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+    return f"{name}@gmail.com"
 
 @bot.message_handler(commands=['start'])
 def start_handler(message):
@@ -40,10 +44,12 @@ def card_handler(message):
             raw_token = session.cookies.get("XSRF-TOKEN", "")
             xsrf_token = urllib.parse.unquote(raw_token)
 
-            # Prepare payload with fixed email, phone, zip code, and is_affiliate
+            # Generate random email for each request
+            email = generate_random_email()
+
             payload = {
                 "name": "Telegram User",
-                "email": FIXED_EMAIL,
+                "email": email,
                 "phone": FIXED_PHONE,
                 "country_code": "1",
                 "password": "TempPass123!",
@@ -75,9 +81,11 @@ def card_handler(message):
 
             resp_json = response.json()
 
-            # Reply with status code and full JSON response
-            status_msg = f"Status code: {response.status_code}\nResponse JSON:\n{resp_json}"
-            bot.reply_to(message, status_msg)
+            if response.status_code == 201:
+                bot.reply_to(message, "Your Card Was Added ✅")
+            else:
+                status_msg = f"Status code: {response.status_code}\nResponse JSON:\n{resp_json}"
+                bot.reply_to(message, status_msg)
 
     except Exception as e:
         bot.reply_to(message, f"Error: {str(e)}")
