@@ -5,7 +5,7 @@ import string
 import time
 import re
 
-BOT_TOKEN = "8072279299:AAF7-9MjDIYkoH6iuDztpbSmyQBvz3kRjG0"
+BOT_TOKEN = "8072279299:AAHSQpNR0d4PuzY5l9kHAqT61-IjWhNjIAI"
 bot = telebot.TeleBot(BOT_TOKEN)
 
 STRIPE_PUBLISHABLE_KEY = "pk_live_gTSPTLXTGXVgIrOkNxFA8F9200HdVDgFMa"
