@@ -2,7 +2,6 @@ import telebot
 import requests
 import random
 import string
-import re
 
 BOT_TOKEN = "8072279299:AAF7-9MjDIYkoH6iuDztpbSmyQBvz3kRjG0"
 CHANNEL_ID = -1002170961342
@@ -14,44 +13,35 @@ def generate_random_email():
     name = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
     return f"{name}@gmail.com"
 
-def extract_card_details(text):
-    # Remove all non-digit, non-slash, non-pipe, non-space, non-dash chars
-    cleaned = re.sub(r"[^\d\/\-\|\s]", "", text)
-    
-    # Extract card number: 13 to 19 digits possibly separated by spaces/dashes/pipes
-    card_number_match = re.findall(r"\d", cleaned)
-    card_number = "".join(card_number_match)
-    if not (13 <= len(card_number) <= 19):
-        card_number = None
-
-    # Extract expiry month/year (formats like MM/YY, MM-YY, MM|YY, MM YY)
-    exp_match = re.search(r"(\d{1,2})[\/\-\|\s](\d{2,4})", cleaned)
-    exp_month = exp_match.group(1) if exp_match else None
-    exp_year = exp_match.group(2) if exp_match else None
-
-    # Extract CVC (3 or 4 digit number, usually last digits)
-    cvc_match = re.findall(r"\b\d{3,4}\b", cleaned)
-    cvc = cvc_match[-1] if cvc_match else None
-
-    return card_number, exp_month, exp_year, cvc
+def parse_card_input(text):
+    parts = text.strip().split('|')
+    if len(parts) != 4:
+        return None
+    card_number, exp_month, exp_year, cvc = map(str.strip, parts)
+    if not (card_number.isdigit() and cvc.isdigit() and exp_month.isdigit() and (len(exp_year) == 2 or len(exp_year) == 4)):
+        return None
+    return card_number, exp_month.zfill(2), exp_year, cvc
 
 @bot.message_handler(commands=['start'])
 def start_handler(message):
     bot.send_message(message.chat.id,
         "💳 CallKite Card Checker\n"
-        "Send card details in any format.\n"
-        "Examples:\n"
-        "• 5275 1500 9724 2499 09/28 575\n"
-        "• 5275150097242499|09|28|575\n"
-        "• 5275-1500-9724-2499 09-28 575"
+        "Send card details in one of these formats:\n"
+        "CardNumber|MM|YY|CVC\n"
+        "CardNumber|MM|YYYY|CVC\n"
+        "Example:\n5275150097242499|09|28|575"
     )
 
 @bot.message_handler(func=lambda m: True)
 def card_handler(message):
     try:
-        card_number, exp_month, exp_year, cvc = extract_card_details(message.text)
-        if not all([card_number, exp_month, exp_year, cvc]):
-            return bot.reply_to(message, "❌ Could not extract all card details. Please send again.")
+        parsed = parse_card_input(message.text)
+        if not parsed:
+            return bot.reply_to(message, "❌ Invalid format. Use: CardNumber|MM|YY|CVC or CardNumber|MM|YYYY|CVC")
+
+        card_number, exp_month, exp_year, cvc = parsed
+        if len(exp_year) == 2:
+            exp_year = "20" + exp_year
 
         email = generate_random_email()
         plan = "monthly"
@@ -59,8 +49,8 @@ def card_handler(message):
         stripe_data = {
             "card[number]": card_number,
             "card[cvc]": cvc,
-            "card[exp_month]": exp_month.zfill(2),
-            "card[exp_year]": exp_year if len(exp_year) == 4 else "20" + exp_year,
+            "card[exp_month]": exp_month,
+            "card[exp_year]": exp_year,
             "guid": ''.join(random.choices(string.ascii_lowercase + string.digits, k=32)),
             "muid": ''.join(random.choices(string.ascii_lowercase + string.digits, k=32)),
             "sid": ''.join(random.choices(string.ascii_lowercase + string.digits, k=32)),
