@@ -1,5 +1,4 @@
 telebot
 requests
 pyTelegramBotAPI
-beautifulsoup4
-numpy
+tiktok
