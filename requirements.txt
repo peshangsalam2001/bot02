@@ -1,2 +1,3 @@
-pyTelegramBotAPI
-tiktok
+pyTelegramBotAPI==4.26.0
+tiktok==0.0.11
+telebot
