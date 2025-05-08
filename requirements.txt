@@ -2,3 +2,4 @@ telebot
 requests
 pyTelegramBotAPI
 tiktok
+TikTokApi
