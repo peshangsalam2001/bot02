@@ -1,4 +1,3 @@
-pyTelegramBotAPI
-convertor
-telebot
-os
+pyTelegramBotAPI==4.15.2
+Pillow==10.2.0
+fpdf==1.7.2
