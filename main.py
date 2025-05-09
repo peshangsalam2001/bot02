@@ -126,7 +126,7 @@ def check_cc(message, cc, mm, yy, cvv):
         resp2 = requests.post(sparktoro_url, headers=sparktoro_headers, data=sparktoro_data, timeout=30)
         text = resp2.text
         if "declined" in text.lower():
-            msg = f"[{cc}|{mm}|{yy}|{cvv}] Declined ❌\nFull response:\n{text}"
+            msg = f"[{cc}|{mm}|{yy}|{cvv}] Decline ❌\nFull response:\n{text}"
         else:
             msg = f"[{cc}|{mm}|{yy}|{cvv}] Success ✅\nFull response:\n{text}"
         bot.send_message(message.chat.id, msg)
