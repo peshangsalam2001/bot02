@@ -1,3 +1,2 @@
-pyTelegramBotAPI==4.26.0
-TikTokApi==5.1.0
-playwright==1.35.0
+pyTelegramBotAPI
+convertor
