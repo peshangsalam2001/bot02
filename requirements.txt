@@ -1,2 +1,4 @@
 pyTelegramBotAPI
 convertor
+telebot
+os
