@@ -1,73 +1,73 @@
 import telebot
 import os
-from convertor import Converter
+from PIL import Image
+from fpdf import FPDF
 
-# Replace with your bot token
-BOT_TOKEN = '7835872937:AAHmy808cQtDdMysSxlli_RlbVKOBkkyApA'
-bot = telebot.TeleBot(BOT_TOKEN)
+API_TOKEN = '8136137612:AAFguFx9ZQPSwyiyDZz08-TDJ5ztLiPVbDY'
+bot = telebot.TeleBot(API_TOKEN)
 
-# Store user sessions in memory (user_id: list of image file paths)
-user_sessions = {}
-
-# Ensure a temp directory exists
-TEMP_DIR = 'temp_images'
-os.makedirs(TEMP_DIR, exist_ok=True)
+# Dictionary to temporarily store photos for each user
+user_photos = {}
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    bot.reply_to(message, "Send me one or more pictures. When done, send /convert to get your PDF.")
+    bot.send_message(message.chat.id, "📸 Send me one or more images, and I'll convert them to a PDF!")
 
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
-    user_id = message.from_user.id
-    # Get the highest resolution photo
+    user_id = message.chat.id
+
+    # Get file ID and info
     file_info = bot.get_file(message.photo[-1].file_id)
-    downloaded_file = bot.download_file(file_info.file_path)
-    
-    # Save the image to temp directory
-    file_path = os.path.join(TEMP_DIR, f'{user_id}_{message.message_id}.jpg')
-    with open(file_path, 'wb') as new_file:
-        new_file.write(downloaded_file)
-    
-    # Add to user session
-    user_sessions.setdefault(user_id, []).append(file_path)
-    bot.reply_to(message, "Photo received. Send more or /convert to create PDF.")
+    file = bot.download_file(file_info.file_path)
+
+    # Create temp folder for user
+    folder = f'temp/{user_id}'
+    os.makedirs(folder, exist_ok=True)
+
+    # Save the image
+    image_path = f"{folder}/{message.message_id}.jpg"
+    with open(image_path, 'wb') as new_file:
+        new_file.write(file)
+
+    # Store path in list
+    if user_id not in user_photos:
+        user_photos[user_id] = []
+    user_photos[user_id].append(image_path)
+
+    bot.send_message(user_id, "✅ Image saved! Send more or type /convert to make a PDF.")
 
 @bot.message_handler(commands=['convert'])
 def convert_to_pdf(message):
-    user_id = message.from_user.id
-    images = user_sessions.get(user_id)
-    if not images:
-        bot.reply_to(message, "No images found. Please send some photos first.")
+    user_id = message.chat.id
+    if user_id not in user_photos or len(user_photos[user_id]) == 0:
+        bot.send_message(user_id, "❌ You haven't sent any images.")
         return
 
-    pdf_path = os.path.join(TEMP_DIR, f'{user_id}_output.pdf')
-    try:
-        # Use convertor to create PDF
-        Converter(images).convert(pdf_path)
-        with open(pdf_path, 'rb') as pdf_file:
-            bot.send_document(message.chat.id, pdf_file, caption="Here is your PDF!")
-    except Exception as e:
-        bot.reply_to(message, f"Error creating PDF: {e}")
-    finally:
-        # Clean up temp files
-        for img in images:
-            if os.path.exists(img):
-                os.remove(img)
-        if os.path.exists(pdf_path):
-            os.remove(pdf_path)
-        user_sessions[user_id] = []
+    image_paths = sorted(user_photos[user_id])  # Sort by order received
+    pdf_path = f"temp/{user_id}/output.pdf"
 
-@bot.message_handler(commands=['cancel'])
-def cancel_session(message):
-    user_id = message.from_user.id
-    images = user_sessions.get(user_id, [])
-    for img in images:
-        if os.path.exists(img):
-            os.remove(img)
-    user_sessions[user_id] = []
-    bot.reply_to(message, "Session cancelled and images deleted.")
+    pdf = FPDF()
+    for image_path in image_paths:
+        image = Image.open(image_path)
+        image = image.convert('RGB')
+        image.save("temp/temp.jpg")
 
-if __name__ == '__main__':
-    print("Bot is running...")
-    bot.polling(none_stop=True)
+        pdf.add_page()
+        pdf.image("temp/temp.jpg", x=10, y=10, w=190)  # Resize if needed
+
+    pdf.output(pdf_path, "F")
+
+    with open(pdf_path, 'rb') as pdf_file:
+        bot.send_document(user_id, pdf_file)
+
+    # Cleanup
+    for img in image_paths:
+        os.remove(img)
+    os.remove("temp/temp.jpg")
+    os.remove(pdf_path)
+    user_photos[user_id] = []
+
+    bot.send_message(user_id, "🎉 PDF created and sent!")
+
+bot.polling()
