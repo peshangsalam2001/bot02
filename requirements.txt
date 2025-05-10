@@ -1,4 +1,3 @@
-pyTelegramBotAPI
-facebook-downloader
+pyTelegramBotAPI==4.15.4
+facebook-downloader==0.2.2
 requests
-telebot
