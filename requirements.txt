@@ -1,4 +1,4 @@
 pyTelegramBotAPI
+facebook-downloader
 requests
-beautifulsoup4
 telebot
