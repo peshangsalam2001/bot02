@@ -1,5 +1,5 @@
 import telebot
-from facebook_downloader import FacebookDownloader
+import FacebookDownloader
 import os
 import re
 
