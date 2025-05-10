@@ -1,3 +1,4 @@
 pyTelegramBotAPI
 snapchat-dl
 telebot
+ffmpeg-python
