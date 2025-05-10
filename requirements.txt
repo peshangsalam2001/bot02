@@ -1,4 +1,4 @@
 pyTelegramBotAPI
-facebook-downloader
+tqdm
 requests
 telebot
