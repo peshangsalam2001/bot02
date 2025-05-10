@@ -3,8 +3,8 @@ import yt_dlp
 import tempfile
 import os
 
-API_TOKEN = '8136969513:AAGkfHTKjxZJa9nvANKHUHW1LutPP3wDBCQ'  # Replace with your Telegram bot token
-COOKIES_FILE = 'cookies.txt'  # Path to your Facebook cookies file
+API_TOKEN = '8136969513:AAGkfHTKjxZJa9nvANKHUHW1LutPP3wDBCQ'  # Your bot token
+COOKIES_FILE = 'cookies.txt'  # Ensure this file exists for private videos
 
 bot = telebot.TeleBot(API_TOKEN)
 
@@ -22,12 +22,9 @@ def download_facebook_video_with_cookies(url, cookies_path):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
-            # yt-dlp may merge to mp4, adjust filename if needed
             if not filename.endswith('.mp4'):
-                base, ext = os.path.splitext(filename)
-                mp4_filename = base + '.mp4'
-                if os.path.exists(mp4_filename):
-                    filename = mp4_filename
+                base, _ = os.path.splitext(filename)
+                filename = base + '.mp4'
             return filename
     except Exception as e:
         print(f"Download error: {e}")
@@ -37,7 +34,7 @@ def download_facebook_video_with_cookies(url, cookies_path):
 def send_welcome(message):
     bot.reply_to(message,
                  "👋 Send me a Facebook video, reel, or story URL (private or public), "
-                 "and I will download it for you using your Facebook cookies.")
+                 "and I will download it for you using Facebook cookies.")
 
 @bot.message_handler(func=lambda message: 'facebook.com' in message.text.lower())
 def handle_facebook_url(message):
@@ -46,8 +43,7 @@ def handle_facebook_url(message):
 
     if not os.path.exists(COOKIES_FILE):
         bot.send_message(message.chat.id,
-                         "⚠️ Facebook cookies file not found on the server. "
-                         "Please upload and configure it before using private video downloads.")
+                         "⚠️ `cookies.txt` file not found. Upload your Facebook cookies file first.")
         return
 
     video_path = download_facebook_video_with_cookies(url, COOKIES_FILE)
@@ -66,11 +62,11 @@ def handle_facebook_url(message):
             except Exception:
                 pass
     else:
-        bot.send_message(message.chat.id, "❌ Sorry, I couldn't download the video. Make sure the link is valid and your cookies allow access.")
+        bot.send_message(message.chat.id, "❌ Failed to download. Make sure your cookies allow access.")
 
 @bot.message_handler(func=lambda message: True)
 def fallback(message):
-    bot.reply_to(message, "Please send a valid Facebook video, reel, or story URL.")
+    bot.reply_to(message, "❗ Please send a valid Facebook video, reel, or story URL.")
 
 if __name__ == '__main__':
     print("Bot is running...")
