@@ -1,39 +1,31 @@
-import os
 import telebot
 from snapchat_dl import SnapchatDL
 
-# Initialize Telegram Bot
-bot = telebot.TeleBot(os.environ.get('8136969513:AAGkfHTKjxZJa9nvANKHUHW1LutPP3wDBCQ'))
+# Replace with your actual bot token
+BOT_TOKEN = "8136969513:AAGkfHTKjxZJa9nvANKHUHW1LutPP3wDBCQ"
 
-@bot.message_handler(commands=['start', 'help'])
+bot = telebot.TeleBot(BOT_TOKEN)
+
+@bot.message_handler(commands=['start'])
 def send_welcome(message):
-    bot.reply_to(message, "Send /download <username> to get Snapchat stories")
+    bot.reply_to(message, "Send me a Snapchat video link, and I'll try to download it for you!")
 
-@bot.message_handler(commands=['download'])
-def handle_download(message):
+@bot.message_handler(func=lambda message: True)
+def download_snapchat_video(message):
+    url = message.text.strip()
+    
+    if "https://www.snapchat.com/" not in url:
+        bot.reply_to(message, "Please send a valid Snapchat video URL.")
+        return
+
     try:
-        username = message.text.split()[1]
-        bot.reply_to(message, f"⏳ Downloading stories for @{username}...")
-        
-        # Configure SnapchatDL
-        dl = SnapchatDL(
-            directory_prefix="downloads",
-            max_workers=2,
-            quiet=True
-        )
-        
-        # Download stories
-        results = dl.download(username)
-        
-        # Send media to user
-        for file in os.listdir(f"downloads/{username}"):
-            with open(f"downloads/{username}/{file}", 'rb') as f:
-                bot.send_document(message.chat.id, f)
-
-    except IndexError:
-        bot.reply_to(message, "❌ Please provide a username")
+        video_url = SnapchatDL().get_video_url(url)
+        if video_url:
+            bot.send_message(message.chat.id, "Here's your download link:")
+            bot.send_message(message.chat.id, video_url)
+        else:
+            bot.reply_to(message, "Could not extract video. The content might be private or invalid.")
     except Exception as e:
-        bot.reply_to(message, f"⚠️ Error: {str(e)}")
+        bot.reply_to(message, f"Error: {str(e)}")
 
-if __name__ == '__main__':
-    bot.infinity_polling()
+bot.polling()
