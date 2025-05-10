@@ -1,4 +1,4 @@
 pyTelegramBotAPI
-tqdm
+yt-dlp
 requests
 telebot
