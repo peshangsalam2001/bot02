@@ -1,64 +1,42 @@
 import telebot
-import requests
-from bs4 import BeautifulSoup
-from io import BytesIO
+from facebook_downloader import FacebookDownloader
+import os
 
-BOT_TOKEN = '8136969513:AAGkfHTKjxZJa9nvANKHUHW1LutPP3wDBCQ'
-bot = telebot.TeleBot(BOT_TOKEN)
+API_TOKEN = '8136969513:AAGkfHTKjxZJa9nvANKHUHW1LutPP3wDBCQ'  # Replace with your Telegram bot token
+bot = telebot.TeleBot(API_TOKEN)
 
-@bot.message_handler(commands=['start'])
+# Create FacebookDownloader instance
+fb_downloader = FacebookDownloader()
+
+@bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    bot.send_message(message.chat.id, "👋 Welcome! Send me a Facebook video or reel link and I’ll download it for you.")
+    bot.reply_to(message, "Send me a Facebook video URL, and I will download it for you.")
 
-@bot.message_handler(func=lambda message: 'facebook.com' in message.text or 'fb.watch' in message.text)
-def fetch_and_send_video(message):
+@bot.message_handler(func=lambda message: 'facebook.com' in message.text.lower())
+def handle_facebook_url(message):
     url = message.text.strip()
-
-    headers = {
-        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "content-type": "application/x-www-form-urlencoded",
-        "origin": "https://fdown.net",
-        "referer": "https://fdown.net/",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-        "cookie": "_ga=GA1.1.2096066794.1746549565; cf_clearance=U5Ad2rk0..."
-    }
-
-    data = {'URLz': url}
+    bot.send_message(message.chat.id, "Downloading your Facebook video, please wait...")
 
     try:
-        # Step 1: POST to FDown to get video links
-        response = requests.post("https://fdown.net/download.php", headers=headers, data=data, timeout=20)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        btns = soup.find_all('a', class_='btn')
+        # Create a temporary directory to store the downloaded video
+        download_dir = "temp_videos"
+        if not os.path.exists(download_dir):
+            os.makedirs(download_dir)
 
-        download_url = None
-        for btn in btns:
-            if 'Download' in btn.text and btn['href'].startswith('http'):
-                download_url = btn['href']
-                break
+        # Set the output path for the downloaded video
+        output_path = os.path.join(download_dir, "facebook_video.mp4")
 
-        if not download_url:
-            bot.send_message(message.chat.id, "❌ Video not found. Make sure it's public.")
-            return
+        # Download the Facebook video using facebook-downloader
+        fb_downloader.download(url, output_path=output_path)
 
-        # Step 2: Download video
-        video_response = requests.get(download_url, stream=True, timeout=30)
-        if video_response.status_code == 200:
-            video_stream = BytesIO(video_response.content)
-            video_stream.name = "facebook_video.mp4"
-
-            # Step 3: Send video
-            bot.send_chat_action(message.chat.id, 'upload_video')
-            bot.send_video(message.chat.id, video=video_stream, caption="🎬 Here's your video!")
+        if os.path.exists(output_path):
+            with open(output_path, 'rb') as video_file:
+                bot.send_video(message.chat.id, video_file)
+            # Clean up the downloaded file
+            os.remove(output_path)
         else:
-            bot.send_message(message.chat.id, "⚠️ Failed to download video from link.")
-
+            bot.send_message(message.chat.id, "Sorry, I couldn't download the video. Please check the URL or try again later.")
     except Exception as e:
-        print("Error:", e)
-        bot.send_message(message.chat.id, "⚠️ Error downloading the video. Try another link.")
-
-@bot.message_handler(func=lambda m: True)
-def fallback(message):
-    bot.send_message(message.chat.id, "📌 Send a Facebook video or reel link.")
+        bot.send_message(message.chat.id, f"An error occurred: {str(e)}")
 
 bot.infinity_polling()
