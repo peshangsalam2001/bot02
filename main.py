@@ -8,7 +8,7 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    bot.reply_to(message, "Send me a Snapchat video link, and I'll try to download it for you!")
+    bot.reply_to(message, "Send me a Snapchat video link. and I'll try to download it for you!")
 
 @bot.message_handler(func=lambda message: True)
 def download_snapchat_video(message):
