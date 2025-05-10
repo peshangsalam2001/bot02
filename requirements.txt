@@ -1,3 +1,4 @@
 pyTelegramBotAPI
-telebot
 requests
+beautifulsoup4
+telebot
