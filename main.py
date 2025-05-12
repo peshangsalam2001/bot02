@@ -174,17 +174,21 @@ def handle_start(message):
         'thread': None,
         'pm_id': None
     }
-    bot.send_message(user_id, "Welcome! Send me credit card info in formats like:\n"
-                              "CC|MM|YY|CVV
+    bot.send_message(
+    user_id,
+    "Welcome! Send me credit card info in formats like:\n"
+    "CC|MM|YY|CVV
 "
-                              "CC|MM|YYYY|CVV
+    "CC|MM|YYYY|CVV
 "
-                              "CC/MM/YY/CVV
+    "CC/MM/YY/CVV
 "
-                              "CC/MM/YYYY/CVV
+    "CC/MM/YYYY/CVV
 "
-                              "You can send multiple cards separated by new lines.")
-    bot.send_message(user_id, "Send /stop to stop checking.")
+    "You can send multiple cards separated by new lines."
+)
+
+bot.send_message(user_id, "Send /stop to stop checking.")
 
 # Command handler for /stop
 @bot.message_handler(commands=['stop'])
