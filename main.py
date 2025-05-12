@@ -1,7 +1,5 @@
 import re
 import time
-import random
-import string
 import threading
 import requests
 import telebot
@@ -11,13 +9,15 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 user_stop_flag = {}
 processing_status = {}
+user_email_counters = {}
 
-def random_email():
-    # Generate a realistic-looking email with lowercase letters and digits
-    username = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
-    domains = ["gmail.com", "yahoo.com", "outlook.com"]
-    domain = random.choice(domains)
-    return f"{username}@{domain}"
+def generate_email(user_id):
+    # Initialize counter if not exists
+    if user_id not in user_email_counters:
+        user_email_counters[user_id] = 2002
+    email_num = user_email_counters[user_id]
+    user_email_counters[user_id] += 1
+    return f"peshangsalam{email_num}@gmail.com"
 
 def parse_cards(text):
     cards = []
@@ -62,9 +62,9 @@ def check_card_flow(message, cards):
             bot.send_message(chat_id, "⏹️ Checking stopped by user.")
             break
 
-        email = random_email()
-        first_name = ''.join(random.choices(string.ascii_letters, k=6)).title()
-        last_name = ''.join(random.choices(string.ascii_letters, k=8)).title()
+        email = generate_email(user_id)
+        first_name = "Peshang"
+        last_name = "Salam"
         
         try:
             # Step 1: Check user
@@ -119,7 +119,6 @@ def check_card_flow(message, cards):
             response_json = billing_response.json()
             response_text = billing_response.text
 
-            # Check approval or failure
             if response_json.get("success") is True and "id" in response_json:
                 status = "✅ Approved"
             elif response_json.get("success") is False and response_json.get("message") == "Failed to create purchase":
@@ -131,6 +130,7 @@ def check_card_flow(message, cards):
                 chat_id,
                 f"Card #{idx}\n"
                 f"Number: {cc}|{mm}|{yy}|{cvv}\n"
+                f"Email: {email}\n"
                 f"Status: {status}\n"
                 f"Response:\n<code>{response_text}</code>",
                 parse_mode="HTML"
@@ -144,7 +144,6 @@ def check_card_flow(message, cards):
                 f"Error: {str(e)}"
             )
 
-        # Delay between checks
         if idx < len(cards):
             for i in range(15, 0, -1):
                 if user_stop_flag.get(user_id):
