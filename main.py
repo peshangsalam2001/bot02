@@ -177,14 +177,10 @@ def handle_start(message):
     bot.send_message(
     user_id,
     "Welcome! Send me credit card info in formats like:\n"
-    "CC|MM|YY|CVV
-"
-    "CC|MM|YYYY|CVV
-"
-    "CC/MM/YY/CVV
-"
-    "CC/MM/YYYY/CVV
-"
+    "CC|MM|YY|CVV\n"
+    "CC|MM|YYYY|CVV\n"
+    "CC/MM/YY/CVV\n"
+    "CC/MM/YYYY/CVV\n"
     "You can send multiple cards separated by new lines."
 )
 
