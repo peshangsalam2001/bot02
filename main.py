@@ -116,7 +116,7 @@ def handle_message(update: Update, context: CallbackContext):
 
 # Main function to start the bot
 def main():
-    updater = Updater("YOUR_TELEGRAM_BOT_TOKEN", use_context=True)
+    updater = Updater("7621706011:AAE8N5F-uz1CNQ2T4QrXqKP7sTxuSeM-YgE", use_context=True)
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler("start", start))
