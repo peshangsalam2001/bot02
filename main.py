@@ -13,8 +13,11 @@ user_stop_flag = {}
 processing_status = {}
 
 def random_email():
+    # Generate a realistic-looking email with lowercase letters and digits
     username = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
-    return f"{username}@gmail.com"
+    domains = ["gmail.com", "yahoo.com", "outlook.com"]
+    domain = random.choice(domains)
+    return f"{username}@{domain}"
 
 def parse_cards(text):
     cards = []
@@ -141,6 +144,7 @@ def check_card_flow(message, cards):
                 f"Error: {str(e)}"
             )
 
+        # Delay between checks
         if idx < len(cards):
             for i in range(15, 0, -1):
                 if user_stop_flag.get(user_id):
@@ -175,4 +179,5 @@ def card_handler(message):
     threading.Thread(target=process_wrapper).start()
 
 if __name__ == '__main__':
+    processing_status = {}
     bot.infinity_polling()
